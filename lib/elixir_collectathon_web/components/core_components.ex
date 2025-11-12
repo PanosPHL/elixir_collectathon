@@ -90,15 +90,22 @@ defmodule ElixirCollectathonWeb.CoreComponents do
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
   attr :class, :string
-  attr :variant, :string, values: ~w(primary)
+  attr :soft, :boolean, default: false
+  attr :outline, :boolean, default: false
+  attr :size, :string, values: ~w(xs sm md lg xl), default: "md"
+  attr :variant, :string, values: ~w(primary secondary accent neutral), default: "neutral"
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
-    variants = %{"primary" => "btn-primary", nil => "btn-primary btn-soft"}
-
     assigns =
       assign_new(assigns, :class, fn ->
-        ["btn", Map.fetch!(variants, assigns[:variant])]
+        [
+          "btn",
+          assigns[:variant] && "btn-#{assigns[:variant]}",
+          assigns[:size] && "btn-#{assigns[:size]}",
+          assigns[:outline] && "btn-outline",
+          assigns[:soft] && "btn-soft"
+        ]
       end)
 
     if rest[:href] || rest[:navigate] || rest[:patch] do
