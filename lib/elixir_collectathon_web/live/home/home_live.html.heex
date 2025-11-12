@@ -9,9 +9,11 @@
     </p>
 
     <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-      <.button outline={true} size="xl" variant="neutral">
-        Create Game
-      </.button>
+      <.form for={@form} id="create-game" phx-submit="create_game">
+        <.button outline={true} size="xl" variant="neutral">
+          Create Game
+        </.button>
+      </.form>
       <.button outline={true} size="xl" variant="accent">
         Join Game
       </.button>

@@ -9,8 +9,11 @@ defmodule ElixirCollectathon.Application do
   def start(_type, _args) do
     children = [
       ElixirCollectathonWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:elixir_collectathon, :dns_cluster_query) || :ignore},
+      {DNSCluster,
+       query: Application.get_env(:elixir_collectathon, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: ElixirCollectathon.PubSub},
+      {Registry, keys: :unique, name: ElixirCollectathon.Games.Registry},
+      {DynamicSupervisor, name: ElixirCollectathon.Games.Supervisor, strategy: :one_for_one},
       # Start a worker by calling: ElixirCollectathon.Worker.start_link(arg)
       # {ElixirCollectathon.Worker, arg},
       # Start to serve requests, typically the last entry

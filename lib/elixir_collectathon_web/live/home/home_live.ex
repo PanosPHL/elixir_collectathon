@@ -1,6 +1,5 @@
 defmodule ElixirCollectathonWeb.HomeLive do
   use ElixirCollectathonWeb, :live_view
-  alias ElixirCollectathonWeb.Components.Cards.FeatureCard, as: FeatureCard
 
   attr :icon_name, :string, required: true
   slot :header, required: true
@@ -19,6 +18,14 @@ defmodule ElixirCollectathonWeb.HomeLive do
   end
 
   def mount(_, _, socket) do
+    socket =
+      assign(socket, form: %{})
+
     {:ok, socket}
+  end
+
+  def handle_event("create_game", _unsigned_params, socket) do
+    ElixirCollectathon.Games.Supervisor.create_game()
+    {:noreply, socket}
   end
 end
