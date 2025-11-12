@@ -36,17 +36,32 @@ defmodule ElixirCollectathonWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <%= if @header_block do %>
-      <header>{render_slot(@header_block)}</header>
-    <% end %>
+    <div class="min-h-screen flex flex-col items-center p-4 sm:p-8">
+      <header class="w-full max-w-5xl py-4 flex justify-between items-center mb-10">
+        <h1 class="text-3xl font-extrabold tracking-widest text-accent">
+          Elixir <span class="text-neutral-content">Collectathon</span>
+        </h1>
+        <nav class="hidden sm:block">
+          <a
+            href="#features"
+            class="text-sm font-medium hover:text-white transition duration-150 mr-6"
+          >
+            Features
+          </a>
+          <a href="#howitworks" class="text-sm font-medium hover:text-white transition duration-150">
+            How It Works
+          </a>
+        </nav>
+      </header>
 
-    <main>
-      <div>
-        {render_slot(@inner_block)}
-      </div>
-    </main>
+      <main>
+        <div>
+          {render_slot(@inner_block)}
+        </div>
+      </main>
 
-    <.flash_group flash={@flash} />
+      <.flash_group flash={@flash} />
+    </div>
     """
   end
 

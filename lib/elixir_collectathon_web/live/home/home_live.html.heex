@@ -1,3 +1,83 @@
 <Layouts.app flash={@flash}>
-  <div>Home</div>
+  <section class="text-center w-full max-w-4xl mb-16">
+    <h2 class="text-5xl sm:text-7xl font-black mb-4 leading-tight">
+      <span class="text-base-accent-content">Real-Time</span>
+      Fun, Built on the Power of <span class="text-accent">Elixir</span>
+    </h2>
+    <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+      Create a game, or jump into an existing one with friends. Hopefully, your friendships perservere.
+    </p>
+
+    <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+      <.button outline={true} size="xl" variant="neutral">
+        Create Game
+      </.button>
+      <.button outline={true} size="xl" variant="accent">
+        Join Game
+      </.button>
+    </div>
+  </section>
+
+  <div class="w-full max-w-4xl h-px section-separator my-10"></div>
+
+  <section id="features" class="w-full max-w-4xl mb-16 text-center">
+    <h3 class="text-4xl font-extrabold mb-10 accent-text">Key Features</h3>
+    <div class="grid md:grid-cols-3 gap-8 text-left">
+      <.feature_card icon_name="hero-bolt">
+        <:header>Real-Time Updates</:header>
+        Instant updates are delivired using <strong>Phoenix LiveView</strong>, which utilizes WebSockets.
+        This persistent connection ensures a real-time, synchronized experience for players.
+      </.feature_card>
+
+      <.feature_card icon_name="hero-globe-alt">
+        <:header>Isolated Game State</:header>
+        The core game logic is built using isolated <strong>GenServer</strong>
+        processes, guaranteeing isolated state, scalability, and fault-tolerance.
+      </.feature_card>
+
+      <.feature_card icon_name="hero-signal">
+        <:header>JavaScript Integration</:header>
+        Elixir can't do everything, so we let the browser do what it does best and pass drawing and graphics to the <strong>HTML5 Canvas</strong>.
+        Phoenix is an extensible framework that allows you to write JavaScript when you need it.
+      </.feature_card>
+    </div>
+  </section>
+
+  <div class="w-full max-w-4xl h-px section-separator my-10"></div>
+
+  <section id="howitworks" class="w-full max-w-4xl mb-16">
+    <h3 class="text-4xl font-extrabold mb-10 text-center accent-text">How To Play</h3>
+
+    <div class="space-y-12">
+      <div class="flex flex-col md:flex-row items-start md:space-x-8 p-6 rounded-xl bg-[#1e2229] shadow-xl">
+        <div class="flex-shrink-0 text-3xl font-bold accent-text mr-4">1.</div>
+        <div>
+          <h4 class="text-2xl font-semibold text-white mb-2">Create or Discover</h4>
+          <p class="text-gray-400">
+            Use the **Create New Game** button to host a private match with custom rules, or instantly browse active public lobbies via **Join Game**. Matches are quick to set up and start in under 60 seconds.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row items-start md:space-x-8 p-6 rounded-xl bg-[#1e2229] shadow-xl">
+        <div class="flex-shrink-0 text-3xl font-bold accent-text mr-4">2.</div>
+        <div>
+          <h4 class="text-2xl font-semibold text-white mb-2">Strategy & Execution</h4>
+          <p class="text-gray-400">
+            Deploy units, manage resources, and outmaneuver your opponent on a dynamically generated map. The core gameplay focuses on fast, adaptive strategy rather than static build orders.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row items-start md:space-x-8 p-6 rounded-xl bg-[#1e2229] shadow-xl">
+        <div class="flex-shrink-0 text-3xl font-bold accent-text mr-4">3.</div>
+        <div>
+          <h4 class="text-2xl font-semibold text-white mb-2">Rank Up & Dominate</h4>
+          <p class="text-gray-400">
+            Win matches to gain rank points and face increasingly skilled opponents. The global leaderboard resets monthly, offering new opportunities for glory and exclusive seasonal rewards.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
 </Layouts.app>
