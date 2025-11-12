@@ -90,6 +90,7 @@ defmodule ElixirCollectathonWeb.CoreComponents do
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
   attr :class, :string
+  attr :block, :boolean, default: false
   attr :soft, :boolean, default: false
   attr :outline, :boolean, default: false
   attr :size, :string, values: ~w(xs sm md lg xl), default: "md"
@@ -104,7 +105,8 @@ defmodule ElixirCollectathonWeb.CoreComponents do
           assigns[:variant] && "btn-#{assigns[:variant]}",
           assigns[:size] && "btn-#{assigns[:size]}",
           assigns[:outline] && "btn-outline",
-          assigns[:soft] && "btn-soft"
+          assigns[:soft] && "btn-soft",
+          assigns[:block] && "btn-block"
         ]
       end)
 
