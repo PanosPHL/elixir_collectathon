@@ -38,9 +38,11 @@ defmodule ElixirCollectathonWeb.Layouts do
     ~H"""
     <div class="min-h-screen flex flex-col items-center p-4 sm:p-8">
       <header class="w-full max-w-5xl py-4 flex justify-between items-center mb-10">
-        <h1 class="text-3xl font-extrabold tracking-widest text-accent">
-          Elixir <span class="text-neutral-content">Collectathon</span>
-        </h1>
+        <.link navigate={~p"/"}>
+          <h1 class="text-3xl font-extrabold tracking-widest text-accent">
+            Elixir <span class="text-neutral-content">Collectathon</span>
+          </h1>
+        </.link>
         <nav class="hidden sm:block">
           <a
             href="#features"
@@ -54,7 +56,7 @@ defmodule ElixirCollectathonWeb.Layouts do
         </nav>
       </header>
 
-      <main>
+      <main class="w-full max-w-5xl">
         <div>
           {render_slot(@inner_block)}
         </div>
