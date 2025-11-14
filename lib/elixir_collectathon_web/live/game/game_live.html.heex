@@ -1,6 +1,13 @@
 <Layouts.app flash={@flash}>
-  <div class="w-full max-w-5xl">
+  <div class="flex flex-col w-full max-w-5xl">
     <h1>Game {@game_id}</h1>
-    <canvas class="block w-full aspect-video" id="game-canvas"></canvas>
+    <canvas
+      class="block w-full aspect-video"
+      id="game-canvas"
+      height="576"
+      width="1024"
+      phx-hook="Game"
+    >
+    </canvas>
   </div>
 </Layouts.app>
