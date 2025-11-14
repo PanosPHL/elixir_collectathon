@@ -56,10 +56,8 @@ defmodule ElixirCollectathonWeb.Layouts do
         </nav>
       </header>
 
-      <main class="w-full max-w-5xl">
-        <div>
-          {render_slot(@inner_block)}
-        </div>
+      <main class="w-full max-w-5xl flex flex-col grow">
+        {render_slot(@inner_block)}
       </main>
 
       <.flash_group flash={@flash} />

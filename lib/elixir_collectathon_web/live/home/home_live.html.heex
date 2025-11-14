@@ -55,20 +55,22 @@
             value=""
           />
 
-          <.button size="xl" variant="accent" type="submit">
-            Join Game
-          </.button>
-          <.button
-            size="xl"
-            variant="accent"
-            phx-click={
-              JS.remove_class("hidden", to: "#create-and-join")
-              |> JS.add_class("hidden", to: "#join-game-form")
-            }
-            type="button"
-          >
-            Cancel
-          </.button>
+          <div class="flex justify-self-end space-x-4">
+            <.button size="xl" variant="accent" type="submit">
+              Join Game
+            </.button>
+            <.button
+              size="xl"
+              variant="accent"
+              phx-click={
+                JS.remove_class("hidden", to: "#create-and-join")
+                |> JS.add_class("hidden", to: "#join-game-form")
+              }
+              type="button"
+            >
+              Cancel
+            </.button>
+          </div>
         </.form>
       </div>
     </section>

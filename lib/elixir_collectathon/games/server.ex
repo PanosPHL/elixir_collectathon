@@ -1,6 +1,15 @@
 defmodule ElixirCollectathon.Games.Server do
+  alias Phoenix.PubSub
+  alias ElixirCollectathon.Games.Game
   alias ElixirCollectathon.Players.Player
   use GenServer
+
+  # 30 Hz
+  @tick_rate 33
+  @box_lw 40
+  @movement_speed 15
+  @map_size {1024, 576}
+  @letters ~w(E L I X I R)
 
   def start_link(game_id) do
     GenServer.start_link(__MODULE__, game_id, name: via_tuple(game_id))
@@ -10,17 +19,22 @@ defmodule ElixirCollectathon.Games.Server do
     {:via, Registry, {ElixirCollectathon.Games.Registry, game_id}}
   end
 
-  def add_player(game_id, player_name) do
-    GenServer.call(via_tuple(game_id), {:add_player, player_name})
+  def join(game_id, player_name) do
+    GenServer.call(via_tuple(game_id), {:join, player_name})
+  end
+
+  def update_velocity(game_id, player_name, {x, y}) do
+    GenServer.cast(via_tuple(game_id), {:velocity, player_name, {x, y}})
   end
 
   @impl GenServer
   def init(game_id) do
-    {:ok, ElixirCollectathon.Games.Game.new(game_id)}
+    :timer.send_interval(@tick_rate, :tick)
+    {:ok, Game.new(game_id)}
   end
 
   @impl GenServer
-  def handle_call({:add_player, player_name}, _from, state) do
+  def handle_call({:join, player_name}, _from, state) do
     new_state =
       %{
         state
@@ -34,4 +48,54 @@ defmodule ElixirCollectathon.Games.Server do
 
     {:reply, :ok, new_state}
   end
+
+  @impl GenServer
+  def handle_cast({:velocity, player_name, {x, y}}, state) do
+    players =
+      state.players
+      |> Map.replace(player_name, %{state.players[player_name] | velocity: {x, y}})
+
+    {:noreply, %{state | players: players}}
+  end
+
+  @impl GenServer
+  def handle_info(:tick, state) do
+    updated_state =
+      update_state(state)
+
+    broadcast(updated_state)
+
+    {:noreply, updated_state}
+  end
+
+  defp broadcast(state) do
+    PubSub.broadcast(
+      ElixirCollectathon.PubSub,
+      "game:#{state.game_id}",
+      {:state, state}
+    )
+  end
+
+  defp update_state(state) do
+    players =
+      Map.new(state.players, fn {player_name, player} ->
+        {player_name, update_position(player)}
+      end)
+
+    %Game{state | players: players, tick_count: state.tick_count + 1}
+  end
+
+  defp update_position(%Player{position: player_position, velocity: player_velocity} = player) do
+    {x, y} = player_position
+    {vx, vy} = player_velocity
+
+    new_position = {
+      clamp(x + vx * @movement_speed, 0, elem(@map_size, 0) - @box_lw),
+      clamp(y + vy * @movement_speed, 0, elem(@map_size, 1) - @box_lw)
+    }
+
+    %Player{player | position: new_position}
+  end
+
+  defp clamp(v, min, max), do: max(min(v, max), min)
 end

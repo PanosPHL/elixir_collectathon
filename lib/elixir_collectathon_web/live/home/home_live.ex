@@ -47,13 +47,16 @@ defmodule ElixirCollectathonWeb.HomeLive do
   end
 
   def handle_event("join_game", %{"game_id" => game_id, "player_name" => player_name}, socket) do
-    case GenServer.call(GameServer.via_tuple(game_id), {:add_player, player_name}) do
-      :ok -> {:noreply, push_navigate(socket, to: ~p"/game/#{game_id}?player=#{player_name}")}
+    case GenServer.call(GameServer.via_tuple(game_id), {:join, player_name}) do
+      :ok ->
+        {:noreply, push_navigate(socket, to: ~p"/controller/#{game_id}?player=#{player_name}")}
+
       # TO DO: Handle unhappy paths
       # 1. Game does not exist
       # 2. Player name already exists
       # 3. Other issue joining game
-      _ -> {:noreply, socket}
+      _ ->
+        {:noreply, socket}
     end
   end
 end

@@ -20,6 +20,7 @@ defmodule ElixirCollectathonWeb.Router do
     live_session :default do
       live "/", HomeLive
       live "/game/:id", GameLive
+      live "/controller/:game_id", ControllerLive
     end
   end
 

@@ -4,3 +4,11 @@ defmodule ElixirCollectathon.Utils do
     |> Base.encode16()
   end
 end
+
+defimpl Jason.Encoder, for: Tuple do
+  def encode(data, options) when is_tuple(data) do
+    data
+    |> Tuple.to_list()
+    |> Jason.Encoder.encode(options)
+  end
+end
