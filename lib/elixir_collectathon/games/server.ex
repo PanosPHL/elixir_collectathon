@@ -8,7 +8,6 @@ defmodule ElixirCollectathon.Games.Server do
   @tick_rate 33
   @box_lw 40
   @movement_speed 15
-  @map_size {1024, 576}
   @letters ~w(E L I X I R)
 
   def start_link(game_id) do
@@ -36,15 +35,7 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   def handle_call({:join, player_name}, _from, state) do
     new_state =
-      %{
-        state
-        | players:
-            Map.put(
-              state.players,
-              player_name,
-              Player.new(player_name)
-            )
-      }
+      Game.add_player(state, Player.new(player_name, state.next_player_num))
 
     {:reply, :ok, new_state}
   end
@@ -53,7 +44,7 @@ defmodule ElixirCollectathon.Games.Server do
   def handle_cast({:velocity, player_name, {x, y}}, state) do
     players =
       state.players
-      |> Map.replace(player_name, %{state.players[player_name] | velocity: {x, y}})
+      |> Map.replace(player_name, Player.set_velocity(state.players[player_name], {x, y}))
 
     {:noreply, %{state | players: players}}
   end
@@ -89,12 +80,14 @@ defmodule ElixirCollectathon.Games.Server do
     {x, y} = player_position
     {vx, vy} = player_velocity
 
+    map_size = Game.get_map_size()
+
     new_position = {
-      clamp(x + vx * @movement_speed, 0, elem(@map_size, 0) - @box_lw),
-      clamp(y + vy * @movement_speed, 0, elem(@map_size, 1) - @box_lw)
+      clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - @box_lw),
+      clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - @box_lw)
     }
 
-    %Player{player | position: new_position}
+    Player.set_position(player, new_position)
   end
 
   defp clamp(v, min, max), do: max(min(v, max), min)
