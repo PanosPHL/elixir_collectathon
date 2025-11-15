@@ -67,16 +67,16 @@ defmodule ElixirCollectathon.Games.Server do
     )
   end
 
-  defp update_state(state) do
+  defp update_state(%Game{} = state) do
     players =
       Map.new(state.players, fn {player_name, player} ->
-        {player_name, update_position(player)}
+        {player_name, update_player_position(player)}
       end)
 
     %Game{state | players: players, tick_count: state.tick_count + 1}
   end
 
-  defp update_position(%Player{position: player_position, velocity: player_velocity} = player) do
+  defp update_player_position(%Player{position: player_position, velocity: player_velocity} = player) do
     {x, y} = player_position
     {vx, vy} = player_velocity
 

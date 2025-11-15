@@ -10,7 +10,7 @@ defmodule ElixirCollectathon.Games.Game do
     %Game{game_id: game_id}
   end
 
-  def add_player(game, player) do
+  def add_player(%Game{} = game, player) do
     %Game{
       game
       | players: Map.put(game.players, player.name, player),
