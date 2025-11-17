@@ -1,6 +1,6 @@
 <Layouts.app flash={@flash}>
   <div class="w-full flex flex-col items-center">
-    <section class="text-center w-full max-w-4xl mb-16">
+    <section class="text-center w-full max-w-4xl mb-28">
       <h2 class="text-5xl sm:text-7xl font-black mb-4 leading-tight">
         <span class="text-base-accent-content">Real-Time</span>
         Fun, Built on the Power of <span class="text-accent">Elixir</span>
@@ -9,21 +9,22 @@
         Create a game, or jump into an existing one with friends. Hopefully, your friendships perservere.
       </p>
 
-      <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-        <div id="create-and-join" class="flex justify-center space-x-12">
+      <div class="flex flex-col items-center">
+        <div id="create-and-join" class="w-48 flex flex-col gap-y-4">
           <.form
             for={@create_game_form}
             id="create-game-form"
+            class="w-full"
             phx-submit="create_game"
           >
-            <.button block={true} size="xl" variant="neutral" type="submit">
+            <.button block={true} size="xl" variant="primary" type="submit">
               Create Game
             </.button>
           </.form>
 
           <.button
             size="xl"
-            variant="accent"
+            variant="neutral"
             phx-click={
               JS.add_class("hidden", to: "#create-and-join")
               |> JS.remove_class("hidden",
@@ -35,10 +36,10 @@
           </.button>
         </div>
         <.form
-          for={%{}}
+          for={@join_game_form}
           id="join-game-form"
           phx-submit="join_game"
-          class="hidden"
+          class="w-2/5 flex flex-col gap-y-4 hidden"
         >
           <.input
             label="Player Name"
@@ -48,20 +49,20 @@
             value=""
           />
           <.input
-            label="Game Id"
+            label="Game ID"
             id="game-id"
             name="game_id"
             type="text"
             value=""
           />
 
-          <div class="flex justify-self-end space-x-4">
-            <.button size="xl" variant="accent" type="submit">
+          <div class="w-full flex justify-end space-x-4">
+            <.button size="xl" variant="neutral" type="submit">
               Join Game
             </.button>
             <.button
               size="xl"
-              variant="accent"
+              variant="info"
               phx-click={
                 JS.remove_class("hidden", to: "#create-and-join")
                 |> JS.add_class("hidden", to: "#join-game-form")
@@ -75,9 +76,7 @@
       </div>
     </section>
 
-    <div class="w-full max-w-4xl h-px section-separator my-10"></div>
-
-    <section id="features" class="w-full max-w-4xl mb-16 text-center">
+    <section id="features" class="w-full max-w-4xl mb-28 text-center">
       <h3 class="text-4xl font-extrabold mb-10 accent-text">Key Features</h3>
       <div class="grid md:grid-cols-3 gap-8 text-left">
         <.feature_card icon_name="hero-bolt">
@@ -100,26 +99,31 @@
       </div>
     </section>
 
-    <div class="w-full max-w-4xl h-px section-separator my-10"></div>
-
-    <section id="howitworks" class="w-full max-w-4xl mb-16">
+    <section id="howitworks" class="w-full max-w-4xl mb-28">
       <h3 class="text-4xl font-extrabold mb-10 text-center accent-text">How To Play</h3>
 
       <div class="space-y-12">
         <.how_to_play_card>
-          <:header>Create or Discover</:header>
-          Use the <strong>Create Game</strong>
-          button to host a private match with custom rules, or instantly browse active public lobbies via <strong>Join Game</strong>. Matches are quick to set up and start in under 60 seconds.
+          <:header>Create and Join</:header>
+          On a neutral, "host", machine use the <strong>Create Game</strong>
+          button to create a lobby which will house all of the logic and visuals for your game.
+          Up to four players can join that game by scanning the QR code and entering their name, or filling out the details manually after hitting the
+          <strong>Join Game</strong>
+          button.
         </.how_to_play_card>
 
         <.how_to_play_card>
-          <:header>Strategy & Execution</:header>
-          Deploy units, manage resources, and outmaneuver your opponent on a dynamically generated map. The core gameplay focuses on fast, adaptive strategy rather than static build orders.
+          <:header>Playing the Game</:header>
+          Once the game has begun, players are tasked with using their joystick to control their block and collect all of the letters in the word "Elixir"
+          that randomly spawn on the map. If you collect a letter you already have, it will select another player at random to remove that letter from their
+          scoreboard. Be careful not to bump into other players, as you will be disabled from moving for a short period of time.
         </.how_to_play_card>
 
         <.how_to_play_card>
-          <:header>Rank Up & Dominate</:header>
-          Win matches to gain rank points and face increasingly skilled opponents. The global leaderboard resets monthly, offering new opportunities for glory and exclusive seasonal rewards.
+          <:header>Viewing a Game</:header>
+          If you're curious how other games are going, feel free to navigate to
+          <code>/games/&lt;&lt;game_id&gt;&gt;</code>
+          and see how it's going!
         </.how_to_play_card>
       </div>
     </section>

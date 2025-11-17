@@ -94,15 +94,24 @@ defmodule ElixirCollectathonWeb.CoreComponents do
   attr :soft, :boolean, default: false
   attr :outline, :boolean, default: false
   attr :size, :string, values: ~w(xs sm md lg xl), default: "md"
-  attr :variant, :string, values: ~w(primary secondary accent neutral), default: "neutral"
+  attr :variant, :string, values: ~w(primary secondary accent neutral info), default: "neutral"
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
+    variants = %{
+      "primary" => "btn-primary",
+      "secondary" => "btn-secondary",
+      "accent" => "btn-accent",
+      "neutral" => "btn-neutral",
+      "info" => "info",
+      nil => ""
+    }
+
     assigns =
       assign_new(assigns, :class, fn ->
         [
           "btn",
-          assigns[:variant] && "btn-#{assigns[:variant]}",
+          Map.fetch!(variants, assigns[:variant]),
           assigns[:size] && "btn-#{assigns[:size]}",
           assigns[:outline] && "btn-outline",
           assigns[:soft] && "btn-soft",
