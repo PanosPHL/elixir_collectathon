@@ -3,6 +3,7 @@ defmodule ElixirCollectathonWeb.Layouts do
   This module holds layouts and related functionality
   used by your application.
   """
+  alias ElixirCollectathonWeb.Routes, as: Routes
   use ElixirCollectathonWeb, :html
 
   # Embed all files in layouts/* within this module.
@@ -38,7 +39,7 @@ defmodule ElixirCollectathonWeb.Layouts do
     ~H"""
     <div class="min-h-screen flex flex-col items-center p-4 sm:p-8">
       <header class="w-full max-w-5xl py-4 flex justify-between items-center mb-10">
-        <.link navigate={~p"/"}>
+        <.link navigate={Routes.home()}>
           <h1 class="text-3xl font-extrabold tracking-widest text-accent">
             Elixir <span class="text-neutral-content">Collectathon</span>
           </h1>
