@@ -42,24 +42,19 @@
           class="w-2/5 flex flex-col gap-y-4 hidden"
         >
           <.input
+            field={@join_game_form[:player_name]}
             label="Player Name"
-            id="player-name"
-            name="player_name"
+            required={true}
             type="text"
-            value=""
           />
           <.input
+            field={@join_game_form[:game_id]}
             label="Game ID"
-            id="game-id"
-            name="game_id"
             type="text"
-            value=""
+            required={true}
           />
 
           <div class="w-full flex justify-end space-x-4">
-            <.button size="xl" variant="neutral" type="submit">
-              Join Game
-            </.button>
             <.button
               size="xl"
               variant="info"
@@ -70,6 +65,9 @@
               type="button"
             >
               Cancel
+            </.button>
+            <.button size="xl" variant="neutral" type="submit">
+              Join Game
             </.button>
           </div>
         </.form>

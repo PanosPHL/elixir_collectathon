@@ -1,6 +1,7 @@
 defmodule ElixirCollectathonWeb.HomeLive do
   alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
   alias ElixirCollectathon.Games.Server, as: GameServer
+  alias ElixirCollectathonWeb.Routes, as: Routes
   use ElixirCollectathonWeb, :live_view
 
   attr :icon_name, :string, required: true
@@ -35,28 +36,82 @@ defmodule ElixirCollectathonWeb.HomeLive do
 
   def mount(_, _, socket) do
     socket =
-      assign(socket, create_game_form: %{}, join_game_form: %{})
+      socket
+      |> assign(
+        create_game_form: to_form(%{}),
+        join_game_form: to_form(%{"player_name" => "", "game_id" => ""})
+      )
 
     {:ok, socket}
   end
 
   def handle_event("create_game", _unsigned_params, socket) do
-    {:ok, game_id} = GameSupervisor.create_game()
+    case GameSupervisor.create_game() do
+      {:ok, game_id} ->
+        {
+          :noreply,
+          socket
+          |> put_flash(:info, "Game successfully created")
+          |> push_navigate(to: Routes.game(game_id))
+        }
 
-    {:noreply, push_navigate(socket, to: ~p"/game/#{game_id}")}
+      {:error, :max_retries} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "There was an issue creating a game, try again later.")}
+    end
   end
 
-  def handle_event("join_game", %{"game_id" => game_id, "player_name" => player_name}, socket) do
-    case GenServer.call(GameServer.via_tuple(game_id), {:join, player_name}) do
-      :ok ->
-        {:noreply, push_navigate(socket, to: ~p"/controller/#{game_id}?player=#{player_name}")}
+  def handle_event(
+        "join_game",
+        %{"game_id" => game_id, "player_name" => player_name} = params,
+        socket
+      ) do
+    # Game does not exist with given ID
+    if is_nil(GenServer.whereis(GameServer.via_tuple(game_id))) do
+      errors = [game_id: {"No game exists with this ID", []}]
 
-      # TO DO: Handle unhappy paths
-      # 1. Game does not exist
-      # 2. Player name already exists
-      # 3. Other issue joining game
-      _ ->
-        {:noreply, socket}
+      {
+        :noreply,
+        socket
+        |> assign(:join_game_form, to_form(params, errors: errors))
+      }
+    else
+      case GenServer.call(GameServer.via_tuple(game_id), {:join, player_name}) do
+        # Player successfully joined game
+        :ok ->
+          {
+            :noreply,
+            socket
+            |> push_navigate(to: Routes.controller(game_id, player_name))
+          }
+
+        # Game already has 4 players
+        {:error, :max_players_reached} ->
+          {
+            :noreply,
+            socket
+            |> put_flash(:error, "There are already four players in this game")
+          }
+
+        # Game already has player of submitted name
+        {:error, :already_added} ->
+          errors = [player_name: {"A player with this name already exists in this game", []}]
+
+          {
+            :noreply,
+            socket
+            |> assign(:join_game_form, to_form(params, errors: errors))
+          }
+
+        # Catch all error
+        _ ->
+          {
+            :noreply,
+            socket
+            |> put_flash(:error, "There was an issue joining this game, please try again later.")
+          }
+      end
     end
   end
 end

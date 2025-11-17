@@ -18,6 +18,7 @@ defmodule ElixirCollectathon.Games.Server do
     {:via, Registry, {ElixirCollectathon.Games.Registry, game_id}}
   end
 
+  # Client interface functions
   def join(game_id, player_name) do
     GenServer.call(via_tuple(game_id), {:join, player_name})
   end
@@ -26,6 +27,7 @@ defmodule ElixirCollectathon.Games.Server do
     GenServer.cast(via_tuple(game_id), {:velocity, player_name, {x, y}})
   end
 
+  # GenServer callbacks
   @impl GenServer
   def init(game_id) do
     :timer.send_interval(@tick_rate, :tick)
@@ -34,10 +36,22 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   def handle_call({:join, player_name}, _from, state) do
-    new_state =
-      Game.add_player(state, Player.new(player_name, state.next_player_num))
+    dbg(length(Map.to_list(state.players)))
 
-    {:reply, :ok, new_state}
+    if length(Map.to_list(state.players)) == 4 do
+      {:reply, {:error, :max_players_reached}, state}
+    else
+      case Map.get(state, player_name) do
+        ^player_name ->
+          {:reply, {:error, :already_added}, state}
+
+        nil ->
+          new_state =
+            Game.add_player(state, Player.new(player_name, state.next_player_num))
+
+          {:reply, :ok, new_state}
+      end
+    end
   end
 
   @impl GenServer
@@ -76,7 +90,9 @@ defmodule ElixirCollectathon.Games.Server do
     %Game{state | players: players, tick_count: state.tick_count + 1}
   end
 
-  defp update_player_position(%Player{position: player_position, velocity: player_velocity} = player) do
+  defp update_player_position(
+         %Player{position: player_position, velocity: player_velocity} = player
+       ) do
     {x, y} = player_position
     {vx, vy} = player_velocity
 
