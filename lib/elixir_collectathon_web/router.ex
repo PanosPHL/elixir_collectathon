@@ -22,6 +22,8 @@ defmodule ElixirCollectathonWeb.Router do
       live "/games/:id", GameLive
       live "/controller/:game_id", ControllerLive
     end
+
+    post "/games/join/", GameController, :join_game
   end
 
   # Other scopes may use custom stacks.

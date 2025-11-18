@@ -27,6 +27,10 @@ defmodule ElixirCollectathon.Games.Server do
     GenServer.cast(via_tuple(game_id), {:velocity, player_name, {x, y}})
   end
 
+  def does_game_exist?(game_id) do
+    not is_nil(GenServer.whereis(via_tuple(game_id)))
+  end
+
   # GenServer callbacks
   @impl GenServer
   def init(game_id) do
@@ -36,9 +40,7 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   def handle_call({:join, player_name}, _from, state) do
-    dbg(length(Map.to_list(state.players)))
-
-    if length(Map.to_list(state.players)) == 4 do
+    if has_four_players?(state.players) do
       {:reply, {:error, :max_players_reached}, state}
     else
       case Map.get(state, player_name) do
@@ -60,7 +62,7 @@ defmodule ElixirCollectathon.Games.Server do
       state.players
       |> Map.replace(player_name, Player.set_velocity(state.players[player_name], {x, y}))
 
-    {:noreply, %{state | players: players}}
+    {:noreply, Game.set_players(state, players)}
   end
 
   @impl GenServer
@@ -73,6 +75,7 @@ defmodule ElixirCollectathon.Games.Server do
     {:noreply, updated_state}
   end
 
+  # Private functions
   defp broadcast(state) do
     PubSub.broadcast(
       ElixirCollectathon.PubSub,
@@ -107,4 +110,6 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   defp clamp(v, min, max), do: max(min(v, max), min)
+
+  defp has_four_players?(players), do: length(Map.to_list(players)) == 4
 end

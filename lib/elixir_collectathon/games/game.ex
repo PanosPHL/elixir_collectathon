@@ -21,4 +21,8 @@ defmodule ElixirCollectathon.Games.Game do
   def get_map_size() do
     @map_size
   end
+
+  def set_players(%Game{} = game, players) do
+    %Game{game | players: players}
+  end
 end

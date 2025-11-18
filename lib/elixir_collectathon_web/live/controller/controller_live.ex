@@ -2,8 +2,13 @@ defmodule ElixirCollectathonWeb.ControllerLive do
   alias ElixirCollectathon.Games.Server, as: GameServer
   use ElixirCollectathonWeb, :live_view
 
-  def mount(%{"player" => player_name, "game_id" => game_id}, _session, socket) do
-    {:ok, assign(socket, player_name: player_name, game_id: game_id)}
+  def mount(%{"game_id" => game_id}, %{"player" => player_name}, socket) do
+    {
+      :ok,
+      socket
+      |> put_flash(:info, "Successfully joined game")
+      |> assign(player_name: player_name, game_id: game_id)
+    }
   end
 
   def handle_event("joystick_move", %{"x" => x, "y" => y}, socket) do

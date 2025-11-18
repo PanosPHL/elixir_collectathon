@@ -16,6 +16,7 @@
             id="create-game-form"
             class="w-full"
             phx-submit="create_game"
+            phx-trigger-action={false}
           >
             <.button block={true} size="xl" variant="primary" type="submit">
               Create Game
@@ -37,9 +38,11 @@
         </div>
         <.form
           for={@join_game_form}
+          action={~p"/games/join"}
           id="join-game-form"
-          phx-submit="join_game"
           class="w-2/5 flex flex-col gap-y-4 hidden"
+          phx-submit="join_game"
+          phx-trigger-action={@trigger_join_game}
         >
           <.input
             field={@join_game_form[:player_name]}

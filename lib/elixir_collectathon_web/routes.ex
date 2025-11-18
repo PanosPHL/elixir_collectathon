@@ -7,7 +7,7 @@ defmodule ElixirCollectathonWeb.Routes do
     ~p"/games/#{game_id}"
   end
 
-  def controller(game_id, player_name) do
-    ~p"/controller/#{game_id}?player=#{player_name}"
+  def controller(game_id) do
+    ~p"/controller/#{game_id}"
   end
 end

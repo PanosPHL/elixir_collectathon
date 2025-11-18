@@ -39,7 +39,8 @@ defmodule ElixirCollectathonWeb.HomeLive do
       socket
       |> assign(
         create_game_form: to_form(%{}),
-        join_game_form: to_form(%{"player_name" => "", "game_id" => ""})
+        join_game_form: to_form(%{"player_name" => "", "game_id" => ""}),
+        trigger_join_game: false
       )
 
     {:ok, socket}
@@ -51,7 +52,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
         {
           :noreply,
           socket
-          |> put_flash(:info, "Game successfully created")
+          |> put_flash(:info, "Game successfully created.")
           |> push_navigate(to: Routes.game(game_id))
         }
 
@@ -68,7 +69,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
         socket
       ) do
     # Game does not exist with given ID
-    if is_nil(GenServer.whereis(GameServer.via_tuple(game_id))) do
+    if not GameServer.does_game_exist?(game_id) do
       errors = [game_id: {"No game exists with this ID", []}]
 
       {
@@ -77,13 +78,13 @@ defmodule ElixirCollectathonWeb.HomeLive do
         |> assign(:join_game_form, to_form(params, errors: errors))
       }
     else
-      case GenServer.call(GameServer.via_tuple(game_id), {:join, player_name}) do
+      case GameServer.join(game_id, player_name) do
         # Player successfully joined game
         :ok ->
           {
             :noreply,
             socket
-            |> push_navigate(to: Routes.controller(game_id, player_name))
+            |> assign(trigger_join_game: true)
           }
 
         # Game already has 4 players
@@ -91,7 +92,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
           {
             :noreply,
             socket
-            |> put_flash(:error, "There are already four players in this game")
+            |> put_flash(:error, "There are already four players in this game.")
           }
 
         # Game already has player of submitted name
