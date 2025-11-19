@@ -1,9 +1,23 @@
 defmodule ElixirCollectathonWeb.HomeLive do
+  @moduledoc """
+  LiveView for the home page where users can create or join games.
+
+  This LiveView provides:
+  - A form to create new games
+  - A form to join existing games by game ID
+  - Feature cards and how-to-play information
+  - Navigation to game and controller views
+
+  Users can switch between creating and joining games using the form view toggle.
+  """
   alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
   alias ElixirCollectathon.Games.Server, as: GameServer
   alias ElixirCollectathonWeb.Routes, as: Routes
   use ElixirCollectathonWeb, :live_view
 
+  @doc """
+  Renders a feature card component with an icon, header, and description.
+  """
   attr :icon_name, :string, required: true
   slot :header, required: true
   slot :inner_block, required: true
@@ -20,6 +34,9 @@ defmodule ElixirCollectathonWeb.HomeLive do
     """
   end
 
+  @doc """
+  Renders a how-to-play card component with a header and description.
+  """
   slot :header, required: true
   slot :inner_block, required: true
 
@@ -34,6 +51,11 @@ defmodule ElixirCollectathonWeb.HomeLive do
     """
   end
 
+  @doc """
+  Mounts the LiveView and initializes form assigns.
+
+  Sets up empty forms for creating and joining games.
+  """
   def mount(_, _, socket) do
     socket =
       socket
@@ -47,6 +69,25 @@ defmodule ElixirCollectathonWeb.HomeLive do
     {:ok, socket}
   end
 
+  @doc """
+  Handles LiveView events.
+
+  ## Events
+
+  ### "create_game"
+  Creates a new game and redirects to the game view on success.
+  Shows an error flash message if game creation fails.
+
+  ### "change_form_view"
+  Switches between "create-and-join" and other form view modes.
+
+  ### "join_game"
+  Validates the game exists and attempts to join the player to the game.
+  Handles various error cases:
+  - Game doesn't exist
+  - Game is full (4 players)
+  - Player name already taken
+  """
   def handle_event("create_game", _unsigned_params, socket) do
     case GameSupervisor.create_game() do
       {:ok, game_id} ->

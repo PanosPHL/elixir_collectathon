@@ -1,5 +1,6 @@
 defmodule ElixirCollectathon.UtilsTest do
   use ExUnit.Case, async: true
+  doctest ElixirCollectathon.Utils
   alias ElixirCollectathon.Utils
 
   describe "generate_code/0" do

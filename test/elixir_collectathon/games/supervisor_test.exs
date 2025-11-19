@@ -1,5 +1,6 @@
 defmodule ElixirCollectathon.Games.SupervisorTest do
   use ExUnit.Case, async: false
+  doctest ElixirCollectathon.Games.Supervisor
   alias ElixirCollectathon.Games.Supervisor
   alias ElixirCollectathon.Games.Server
 

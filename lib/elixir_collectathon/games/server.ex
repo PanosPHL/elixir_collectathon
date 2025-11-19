@@ -1,4 +1,17 @@
 defmodule ElixirCollectathon.Games.Server do
+  @moduledoc """
+  GenServer process that manages the state and logic for a single game instance.
+
+  This server:
+  - Manages game state including players, positions, and game ticks
+  - Handles player joining and velocity updates
+  - Broadcasts game state updates via PubSub at 30 Hz (every 33ms)
+  - Updates player positions based on their velocity each tick
+  - Enforces game rules (max 4 players, unique player names)
+
+  The server is registered in a Registry using the game_id as the key,
+  allowing it to be found and accessed by other processes.
+  """
   alias Phoenix.PubSub
   alias ElixirCollectathon.Games.Game
   alias ElixirCollectathon.Players.Player
@@ -10,23 +23,97 @@ defmodule ElixirCollectathon.Games.Server do
   @movement_speed 15
   @letters ~w(E L I X I R)
 
+  @doc """
+  Starts a new game server process linked to the current process.
+
+  The server is registered in the Registry using the game_id.
+
+  ## Parameters
+    - `game_id` - A unique identifier for the game
+
+  ## Returns
+    - `{:ok, pid}` - If the server started successfully
+    - `{:error, reason}` - If the server failed to start
+
+  ## Examples
+
+      {:ok, pid} = Server.start_link("ABC123")
+  """
   def start_link(game_id) do
     GenServer.start_link(__MODULE__, game_id, name: via_tuple(game_id))
   end
 
+  @doc """
+  Returns the via tuple for registering/finding the server in the Registry.
+
+  ## Parameters
+    - `game_id` - The game ID to create the via tuple for
+
+  ## Examples
+
+      iex> ElixirCollectathon.Games.Server.via_tuple("ABC123")
+      {:via, Registry, {ElixirCollectathon.Games.Registry, "ABC123"}}
+  """
   def via_tuple(game_id) do
     {:via, Registry, {ElixirCollectathon.Games.Registry, game_id}}
   end
 
-  # Client interface functions
+  @doc """
+  Attempts to add a player to the game.
+
+  ## Parameters
+    - `game_id` - The ID of the game to join
+    - `player_name` - The name of the player joining
+
+  ## Returns
+    - `:ok` - Player successfully joined
+    - `{:error, :max_players_reached}` - Game already has 4 players
+    - `{:error, :already_added}` - A player with this name already exists
+
+  ## Examples
+
+      Server.join("ABC123", "Alice")
+      # => :ok
+  """
   def join(game_id, player_name) do
     GenServer.call(via_tuple(game_id), {:join, player_name})
   end
 
+  @doc """
+  Updates the velocity of a player in the game.
+
+  The velocity is a tuple of {x, y} values, typically in the range [-1, 1],
+  representing the direction and speed of movement.
+
+  ## Parameters
+    - `game_id` - The ID of the game
+    - `player_name` - The name of the player whose velocity to update
+    - `{x, y}` - A tuple representing the velocity vector
+
+  ## Examples
+
+      Server.update_velocity("ABC123", "Alice", {1, 0})
+      # => :ok (moves right)
+  """
   def update_velocity(game_id, player_name, {x, y}) do
     GenServer.cast(via_tuple(game_id), {:velocity, player_name, {x, y}})
   end
 
+  @doc """
+  Checks if a game server process exists for the given game ID.
+
+  ## Parameters
+    - `game_id` - The game ID to check
+
+  ## Returns
+    - `true` - If a server process exists
+    - `false` - If no server process exists
+
+  ## Examples
+
+      Server.does_game_exist?("ABC123")
+      # => true
+  """
   def does_game_exist?(game_id) do
     not is_nil(GenServer.whereis(via_tuple(game_id)))
   end

@@ -1,5 +1,6 @@
 defmodule ElixirCollectathon.Games.ServerTest do
   use ExUnit.Case, async: false
+  doctest ElixirCollectathon.Games.Server
   alias ElixirCollectathon.Games.Server
   alias ElixirCollectathon.Games.Game
 
