@@ -25,4 +25,8 @@ defmodule ElixirCollectathon.Games.Game do
   def set_players(%Game{} = game, players) do
     %Game{game | players: players}
   end
+
+  def has_player?(%Game{} = game, player_name) do
+    Map.has_key?(game.players, player_name)
+  end
 end

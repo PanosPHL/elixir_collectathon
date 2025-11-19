@@ -10,7 +10,11 @@
       </p>
 
       <div class="flex flex-col items-center">
-        <div id="create-and-join" class="w-48 flex flex-col gap-y-4">
+      <%= case @form_view do %>
+      <% "create-and-join" -> %>
+        <div
+        id="create-and-join"
+        class="w-48 flex flex-col gap-y-4">
           <.form
             for={@create_game_form}
             id="create-game-form"
@@ -22,20 +26,17 @@
               Create Game
             </.button>
           </.form>
-
           <.button
             size="xl"
             variant="neutral"
-            phx-click={
-              JS.add_class("hidden", to: "#create-and-join")
-              |> JS.remove_class("hidden",
-                to: "#join-game-form"
-              )
-            }
+            phx-click={JS.push("change_form_view", value: %{form_view: "join-game"})}
+            phx-trigger-action={false}
+            id="join-game-button"
           >
             Join Game
           </.button>
         </div>
+      <% "join-game" -> %>
         <.form
           for={@join_game_form}
           action={~p"/games/join"}
@@ -61,10 +62,9 @@
             <.button
               size="xl"
               variant="info"
-              phx-click={
-                JS.remove_class("hidden", to: "#create-and-join")
-                |> JS.add_class("hidden", to: "#join-game-form")
-              }
+              phx-click={JS.push("change_form_view", value: %{form_view: "create-and-join"})}
+              phx-trigger-action={false}
+              id="cancel-join-game-button"
               type="button"
             >
               Cancel
@@ -74,6 +74,7 @@
             </.button>
           </div>
         </.form>
+      <% end %>
       </div>
     </section>
 

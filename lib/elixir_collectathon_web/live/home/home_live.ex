@@ -40,7 +40,8 @@ defmodule ElixirCollectathonWeb.HomeLive do
       |> assign(
         create_game_form: to_form(%{}),
         join_game_form: to_form(%{"player_name" => "", "game_id" => ""}),
-        trigger_join_game: false
+        trigger_join_game: false,
+        form_view: "create-and-join"
       )
 
     {:ok, socket}
@@ -61,6 +62,10 @@ defmodule ElixirCollectathonWeb.HomeLive do
          socket
          |> put_flash(:error, "There was an issue creating a game, try again later.")}
     end
+  end
+
+  def handle_event("change_form_view", %{"form_view" => form_view}, socket) do
+    {:noreply, assign(socket, form_view: form_view)}
   end
 
   def handle_event(

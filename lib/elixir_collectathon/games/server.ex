@@ -43,15 +43,16 @@ defmodule ElixirCollectathon.Games.Server do
     if has_four_players?(state.players) do
       {:reply, {:error, :max_players_reached}, state}
     else
-      case Map.get(state, player_name) do
-        ^player_name ->
-          {:reply, {:error, :already_added}, state}
-
-        nil ->
+      case Game.has_player?(state, player_name) do
+        false ->
           new_state =
             Game.add_player(state, Player.new(player_name, state.next_player_num))
 
           {:reply, :ok, new_state}
+
+        true ->
+          {:reply, {:error, :already_added}, state}
+
       end
     end
   end
