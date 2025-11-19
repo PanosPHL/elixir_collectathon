@@ -22,6 +22,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
   slot :header, required: true
   slot :inner_block, required: true
 
+  @spec feature_card(map()) :: Phoenix.LiveView.Rendered.t()
   def feature_card(assigns) do
     ~H"""
     <div class="p-6 rounded-lg bg-[#3e4451] border border-gray-700 shadow-xl">
@@ -40,6 +41,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
   slot :header, required: true
   slot :inner_block, required: true
 
+  @spec how_to_play_card(map()) :: Phoenix.LiveView.Rendered.t()
   def how_to_play_card(assigns) do
     ~H"""
     <div class="flex flex-col md:flex-row items-start md:space-x-8 p-6 rounded-xl bg-[#1e2229] shadow-xl">
@@ -56,6 +58,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
 
   Sets up empty forms for creating and joining games.
   """
+  @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(_, _, socket) do
     socket =
       socket
@@ -88,6 +91,9 @@ defmodule ElixirCollectathonWeb.HomeLive do
   - Game is full (4 players)
   - Player name already taken
   """
+
+  @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("create_game", _unsigned_params, socket) do
     case GameSupervisor.create_game() do
       {:ok, game_id} ->

@@ -29,12 +29,14 @@ defmodule ElixirCollectathon.Games.Supervisor do
       Supervisor.create_game()
       # => {:ok, "A1B2C3D4"}
   """
+
+  @spec create_game(non_neg_integer()) :: {:ok, String.t()} | {:error, :max_retries}
   def create_game(count \\ 0) do
     game_id = ElixirCollectathon.Utils.generate_code()
 
     cond do
       count <= 5 ->
-        if GenServer.whereis(GameServer.via_tuple(game_id)) do
+        if GameServer.does_game_exist?(game_id) do
           create_game(count + 1)
         else
           case DynamicSupervisor.start_child(__MODULE__, {GameServer, game_id}) do

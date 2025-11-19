@@ -39,6 +39,8 @@ defmodule ElixirCollectathon.Games.Server do
 
       {:ok, pid} = Server.start_link("ABC123")
   """
+
+  @spec start_link(String.t()) :: GenServer.on_start()
   def start_link(game_id) do
     GenServer.start_link(__MODULE__, game_id, name: via_tuple(game_id))
   end
@@ -54,6 +56,8 @@ defmodule ElixirCollectathon.Games.Server do
       iex> ElixirCollectathon.Games.Server.via_tuple("ABC123")
       {:via, Registry, {ElixirCollectathon.Games.Registry, "ABC123"}}
   """
+
+  @spec via_tuple(String.t()) :: {:via, Registry, {ElixirCollectathon.Games.Registry, String.t()}}
   def via_tuple(game_id) do
     {:via, Registry, {ElixirCollectathon.Games.Registry, game_id}}
   end
@@ -75,6 +79,8 @@ defmodule ElixirCollectathon.Games.Server do
       Server.join("ABC123", "Alice")
       # => :ok
   """
+
+  @spec join(String.t(), String.t()) :: :ok | {:error, :max_players_reached} | {:error, :already_added}
   def join(game_id, player_name) do
     GenServer.call(via_tuple(game_id), {:join, player_name})
   end
@@ -95,6 +101,8 @@ defmodule ElixirCollectathon.Games.Server do
       Server.update_velocity("ABC123", "Alice", {1, 0})
       # => :ok (moves right)
   """
+
+  @spec update_velocity(String.t(), String.t(), {integer(), integer()}) :: :ok
   def update_velocity(game_id, player_name, {x, y}) do
     GenServer.cast(via_tuple(game_id), {:velocity, player_name, {x, y}})
   end
@@ -114,18 +122,23 @@ defmodule ElixirCollectathon.Games.Server do
       Server.does_game_exist?("ABC123")
       # => true
   """
+
+  @spec does_game_exist?(String.t()) :: boolean()
   def does_game_exist?(game_id) do
     not is_nil(GenServer.whereis(via_tuple(game_id)))
   end
 
   # GenServer callbacks
+
   @impl GenServer
+  @spec init(String.t()) :: {:ok, Game.t()}
   def init(game_id) do
     :timer.send_interval(@tick_rate, :tick)
     {:ok, Game.new(game_id)}
   end
 
   @impl GenServer
+  @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) :: {:reply, :ok | {:error, :max_players_reached} | {:error, :already_added}, Game.t()}
   def handle_call({:join, player_name}, _from, state) do
     if has_four_players?(state.players) do
       {:reply, {:error, :max_players_reached}, state}
@@ -145,6 +158,7 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
+  @spec handle_cast({:velocity, String.t(), {integer(), integer()}}, Game.t()) :: {:noreply, Game.t()}
   def handle_cast({:velocity, player_name, {x, y}}, state) do
     players =
       state.players
@@ -154,6 +168,7 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
+  @spec handle_info(:tick, Game.t()) :: {:noreply, Game.t()}
   def handle_info(:tick, state) do
     updated_state =
       update_state(state)
@@ -164,6 +179,7 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   # Private functions
+  @spec broadcast(Game.t()) :: :ok
   defp broadcast(state) do
     PubSub.broadcast(
       ElixirCollectathon.PubSub,
@@ -172,6 +188,7 @@ defmodule ElixirCollectathon.Games.Server do
     )
   end
 
+  @spec update_state(Game.t()) :: Game.t()
   defp update_state(%Game{} = state) do
     players =
       Map.new(state.players, fn {player_name, player} ->
@@ -181,6 +198,7 @@ defmodule ElixirCollectathon.Games.Server do
     %Game{state | players: players, tick_count: state.tick_count + 1}
   end
 
+  @spec update_player_position(Player.t()) :: Player.t()
   defp update_player_position(
          %Player{position: player_position, velocity: player_velocity} = player
        ) do
@@ -197,7 +215,9 @@ defmodule ElixirCollectathon.Games.Server do
     Player.set_position(player, new_position)
   end
 
+  @spec clamp(non_neg_integer() , 0, non_neg_integer()) :: non_neg_integer()
   defp clamp(v, min, max), do: max(min(v, max), min)
 
+  @spec has_four_players?(%{optional(String.t()) => Player.t()}) :: boolean()
   defp has_four_players?(players), do: length(Map.to_list(players)) == 4
 end

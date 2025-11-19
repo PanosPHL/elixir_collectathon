@@ -11,7 +11,17 @@ defmodule ElixirCollectathon.Games.Game do
 
   The game map size is fixed at 1024x576 pixels.
   """
+
   alias __MODULE__
+  alias ElixirCollectathon.Players.Player
+
+  @type t() :: %__MODULE__{
+    game_id: String.t(),
+    tick_count: non_neg_integer(),
+    is_running: boolean(),
+    players: %{optional(String.t()) => Player.player()},
+    next_player_num: pos_integer()
+  }
 
   @map_size {1024, 576}
 
@@ -32,6 +42,8 @@ defmodule ElixirCollectathon.Games.Game do
       iex> game.tick_count
       0
   """
+
+  @spec new(String.t()) :: Game.t()
   def new(game_id) do
     %Game{game_id: game_id}
   end
@@ -53,7 +65,9 @@ defmodule ElixirCollectathon.Games.Game do
       iex> Map.has_key?(updated_game.players, "Alice")
       true
   """
-  def add_player(%Game{} = game, player) do
+
+  @spec add_player(Game.t(), Player.player()) :: Game.t()
+  def add_player(%Game{} = game, %Player{} = player) do
     %Game{
       game
       | players: Map.put(game.players, player.name, player),
@@ -69,6 +83,8 @@ defmodule ElixirCollectathon.Games.Game do
       iex> ElixirCollectathon.Games.Game.get_map_size()
       {1024, 576}
   """
+
+  @spec get_map_size() :: {pos_integer(), pos_integer()}
   def get_map_size() do
     @map_size
   end
@@ -90,6 +106,8 @@ defmodule ElixirCollectathon.Games.Game do
       iex> updated_game.players["Alice"].name
       "Alice"
   """
+
+  @spec set_players(Game.t(), %{optional(String.t()) => Player.player()}) :: Game.t()
   def set_players(%Game{} = game, players) do
     %Game{game | players: players}
   end
@@ -111,6 +129,8 @@ defmodule ElixirCollectathon.Games.Game do
       iex> ElixirCollectathon.Games.Game.has_player?(game, "Bob")
       false
   """
+
+  @spec has_player?(Game.t(), String.t()) :: boolean()
   def has_player?(%Game{} = game, player_name) do
     Map.has_key?(game.players, player_name)
   end

@@ -10,71 +10,72 @@
       </p>
 
       <div class="flex flex-col items-center">
-      <%= case @form_view do %>
-      <% "create-and-join" -> %>
-        <div
-        id="create-and-join"
-        class="w-48 flex flex-col gap-y-4">
-          <.form
-            for={@create_game_form}
-            id="create-game-form"
-            class="w-full"
-            phx-submit="create_game"
-            phx-trigger-action={false}
-          >
-            <.button block={true} size="xl" variant="primary" type="submit">
-              Create Game
-            </.button>
-          </.form>
-          <.button
-            size="xl"
-            variant="neutral"
-            phx-click={JS.push("change_form_view", value: %{form_view: "join-game"})}
-            phx-trigger-action={false}
-            id="join-game-button"
-          >
-            Join Game
-          </.button>
-        </div>
-      <% "join-game" -> %>
-        <.form
-          for={@join_game_form}
-          action={~p"/games/join"}
-          id="join-game-form"
-          class="w-2/5 flex flex-col gap-y-4 hidden"
-          phx-submit="join_game"
-          phx-trigger-action={@trigger_join_game}
-        >
-          <.input
-            field={@join_game_form[:player_name]}
-            label="Player Name"
-            required={true}
-            type="text"
-          />
-          <.input
-            field={@join_game_form[:game_id]}
-            label="Game ID"
-            type="text"
-            required={true}
-          />
-
-          <div class="w-full flex justify-end space-x-4">
-            <.button
-              size="xl"
-              variant="info"
-              phx-click={JS.push("change_form_view", value: %{form_view: "create-and-join"})}
-              phx-trigger-action={false}
-              id="cancel-join-game-button"
-              type="button"
+        <%= case @form_view do %>
+          <% "create-and-join" -> %>
+            <div
+              id="create-and-join"
+              class="w-48 flex flex-col gap-y-4"
             >
-              Cancel
-            </.button>
-            <.button size="xl" variant="neutral" type="submit">
-              Join Game
-            </.button>
-          </div>
-        </.form>
-      <% end %>
+              <.form
+                for={@create_game_form}
+                id="create-game-form"
+                class="w-full"
+                phx-submit="create_game"
+                phx-trigger-action={false}
+              >
+                <.button block={true} size="xl" variant="primary" type="submit">
+                  Create Game
+                </.button>
+              </.form>
+              <.button
+                size="xl"
+                variant="neutral"
+                phx-click={JS.push("change_form_view", value: %{form_view: "join-game"})}
+                phx-trigger-action={false}
+                id="join-game-button"
+              >
+                Join Game
+              </.button>
+            </div>
+          <% "join-game" -> %>
+            <.form
+              for={@join_game_form}
+              action={~p"/games/join"}
+              id="join-game-form"
+              class="w-2/5 flex flex-col gap-y-4"
+              phx-submit="join_game"
+              phx-trigger-action={@trigger_join_game}
+            >
+              <.input
+                field={@join_game_form[:player_name]}
+                label="Player Name"
+                required={true}
+                type="text"
+              />
+              <.input
+                field={@join_game_form[:game_id]}
+                label="Game ID"
+                type="text"
+                required={true}
+              />
+
+              <div class="w-full flex justify-end space-x-4">
+                <.button
+                  size="xl"
+                  variant="info"
+                  phx-click={JS.push("change_form_view", value: %{form_view: "create-and-join"})}
+                  phx-trigger-action={false}
+                  id="cancel-join-game-button"
+                  type="button"
+                >
+                  Cancel
+                </.button>
+                <.button size="xl" variant="neutral" type="submit">
+                  Join Game
+                </.button>
+              </div>
+            </.form>
+        <% end %>
       </div>
     </section>
 

@@ -18,6 +18,14 @@ defmodule ElixirCollectathon.Players.Player do
   alias ElixirCollectathon.Games.Game
   alias __MODULE__
 
+  @type t() :: %__MODULE__{
+    color: String.t(),
+    name: String.t(),
+    position: {non_neg_integer(), non_neg_integer()},
+    velocity: {non_neg_integer(), non_neg_integer()},
+    inventory: String.t()
+  }
+
   @player_lw 40
 
   @player_colors %{
@@ -50,6 +58,8 @@ defmodule ElixirCollectathon.Players.Player do
       iex> player.position
       {0, 0}
   """
+
+  @spec new(String.t(), pos_integer()) :: Player.t()
   def new(name, player_num \\ 1) do
     {map_x, map_y} = Game.get_map_size()
 
@@ -82,6 +92,8 @@ defmodule ElixirCollectathon.Players.Player do
       iex> updated.velocity
       {1, 0}
   """
+
+  @spec set_velocity(Player.t(), {integer(), integer()}) :: Player.t()
   def set_velocity(%Player{} = player, velocity) do
     %Player{player | velocity: velocity}
   end
@@ -100,6 +112,8 @@ defmodule ElixirCollectathon.Players.Player do
       iex> updated.position
       {100, 200}
   """
+
+  @spec set_position(Player.t(), {non_neg_integer(), non_neg_integer()}) :: Player.t()
   def set_position(%Player{} = player, position) do
     %Player{player | position: position}
   end

@@ -18,6 +18,8 @@ defmodule ElixirCollectathonWeb.ControllerLive do
   The player name is retrieved from the session set by the GameController
   when the player successfully joins a game.
   """
+
+  @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(%{"game_id" => game_id}, %{"player" => player_name}, socket) do
     {
       :ok,
@@ -34,6 +36,9 @@ defmodule ElixirCollectathonWeb.ControllerLive do
   The x and y values are typically in the range [-1, 1] representing
   the direction and magnitude of movement.
   """
+
+  @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("joystick_move", %{"x" => x, "y" => y}, socket) do
     %{game_id: game_id, player_name: player_name} = socket.assigns
 
