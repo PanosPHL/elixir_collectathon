@@ -35,6 +35,13 @@ defmodule ElixirCollectathonWeb.ControllerLiveTest do
       html = render(view)
       assert html =~ "Successfully joined game"
     end
+
+    test "redirects to home when session is missing", %{conn: conn} do
+      {:ok, game_id} = Supervisor.create_game()
+
+      # No session data
+      {:error, {:live_redirect, %{to: "/"}}} = live(conn, Routes.controller(game_id))
+    end
   end
 
   describe "joystick_move event" do

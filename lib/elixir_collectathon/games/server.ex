@@ -85,6 +85,11 @@ defmodule ElixirCollectathon.Games.Server do
     GenServer.call(via_tuple(game_id), {:join, player_name})
   end
 
+  @spec leave(String.t(), String.t()) :: :ok
+  def leave(game_id, player_name) do
+    GenServer.cast(via_tuple(game_id), {:leave, player_name})
+  end
+
   @doc """
   Updates the velocity of a player in the game.
 
@@ -139,7 +144,7 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) :: {:reply, :ok | {:error, :max_players_reached} | {:error, :already_added}, Game.t()}
-  def handle_call({:join, player_name}, _from, state) do
+  def handle_call({:join, player_name}, _from, %Game{} = state) do
     if has_four_players?(state.players) do
       {:reply, {:error, :max_players_reached}, state}
     else
@@ -158,8 +163,14 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
+  @spec handle_cast({:leave, String.t()}, Game.t()) :: {:noreply, Game.t()}
+  def handle_cast({:leave, player_name}, %Game{} = state) do
+    {:noreply, Game.remove_player(state, player_name)}
+  end
+
+  @impl GenServer
   @spec handle_cast({:velocity, String.t(), {integer(), integer()}}, Game.t()) :: {:noreply, Game.t()}
-  def handle_cast({:velocity, player_name, {x, y}}, state) do
+  def handle_cast({:velocity, player_name, {x, y}}, %Game{} = state) do
     players =
       state.players
       |> Map.replace(player_name, Player.set_velocity(state.players[player_name], {x, y}))
@@ -169,7 +180,7 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   @spec handle_info(:tick, Game.t()) :: {:noreply, Game.t()}
-  def handle_info(:tick, state) do
+  def handle_info(:tick, %Game{} = state) do
     updated_state =
       update_state(state)
 
@@ -180,7 +191,7 @@ defmodule ElixirCollectathon.Games.Server do
 
   # Private functions
   @spec broadcast(Game.t()) :: :ok
-  defp broadcast(state) do
+  defp broadcast(%Game{} = state) do
     PubSub.broadcast(
       ElixirCollectathon.PubSub,
       "game:#{state.game_id}",

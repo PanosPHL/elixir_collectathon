@@ -21,6 +21,7 @@ defmodule ElixirCollectathonWeb.GameController do
   @spec join_game(Plug.Conn.t(), %{optional(String.t()) => String.t()}) :: Plug.Conn.t()
   def join_game(conn, %{"game_id" => game_id, "player_name" => player_name}) do
     conn
+    |> put_session(:game_id, game_id)
     |> put_session(:player, player_name)
     |> redirect(to: Routes.controller(game_id))
   end

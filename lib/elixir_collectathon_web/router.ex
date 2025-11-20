@@ -17,13 +17,11 @@ defmodule ElixirCollectathonWeb.Router do
   scope "/", ElixirCollectathonWeb do
     pipe_through :browser
 
-    live_session :default do
-      live "/", HomeLive
-      live "/games/:id", GameLive
-      live "/controller/:game_id", ControllerLive
-    end
-
+    get "/", HomeController, :index
     post "/games/join/", GameController, :join_game
+
+    live "/games/:id", GameLive
+    live "/controller/:game_id", ControllerLive
   end
 
   # Other scopes may use custom stacks.

@@ -18,6 +18,7 @@ defmodule ElixirCollectathonWeb.GameControllerTest do
 
       assert redirected_to(conn) == Routes.controller(game_id)
       assert get_session(conn, :player) == "Alice"
+      assert get_session(conn, :game_id) == game_id
     end
 
     test "stores player name in session", %{conn: conn} do

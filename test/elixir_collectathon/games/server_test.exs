@@ -49,6 +49,32 @@ defmodule ElixirCollectathon.Games.ServerTest do
     end
   end
 
+  describe "leave/2" do
+    test "removes a player from the game", %{game_id: game_id} do
+      Server.join(game_id, "Alice")
+      Server.leave(game_id, "Alice")
+
+      # Wait a bit for the cast to process
+      Process.sleep(50)
+
+      state = :sys.get_state(Server.via_tuple(game_id))
+      refute Map.has_key?(state.players, "Alice")
+    end
+
+    test "frees up the player number", %{game_id: game_id} do
+      Server.join(game_id, "Alice") # Player 1
+      Server.join(game_id, "Bob")   # Player 2
+      Server.leave(game_id, "Alice")
+
+      Process.sleep(50)
+
+      Server.join(game_id, "Charlie") # Should be Player 1
+
+      state = :sys.get_state(Server.via_tuple(game_id))
+      assert state.players["Charlie"].player_num == 1
+    end
+  end
+
   describe "update_velocity/3" do
     test "updates player velocity", %{game_id: game_id} do
       Server.join(game_id, "Alice")

@@ -15,9 +15,11 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
       assert html =~ game_id
     end
 
-    # Skip test for non-existent game as it requires error templates
-    # The mount function handles non-existent games gracefully by returning {:ok, socket}
-    # but the LiveView system may try to render an error page which requires templates
+    test "redirects to home page when game does not exist", %{conn: conn} do
+      {:error, {:redirect, %{to: path}}} = live(conn, Routes.game("non_existent_game_id"))
+
+      assert path == Routes.home()
+    end
 
     test "subscribes to game updates when connected", %{conn: conn} do
       {:ok, game_id} = Supervisor.create_game()
