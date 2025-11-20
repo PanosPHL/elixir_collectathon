@@ -1,13 +1,24 @@
 <Layouts.app flash={@flash}>
   <div class="flex flex-col w-full gap-4 max-w-5xl">
-    <canvas
-      class="block w-full aspect-video border border-base-content"
-      id="game-canvas"
-      height="576"
-      width="1024"
-      phx-hook="Game"
-    >
-    </canvas>
+    <div class="relative">
+      <div class="absolute top-1/2 left-1/2 translate-[-50%]">
+        <.async_result :let={qr_code} assign={@qr_code}>
+          <:loading><span class="loading loading-bars loading-xl scale-300"></span></:loading>
+          <:failed :let={_failure}>
+            <h1>{@game_id}</h1>
+          </:failed>
+          <div class="scale-75">{raw(elem(qr_code, 1))}</div>
+        </.async_result>
+      </div>
+      <canvas
+        class="block w-full aspect-video border border-base-content"
+        id="game-canvas"
+        height="576"
+        width="1024"
+        phx-hook="Game"
+      >
+      </canvas>
+    </div>
     <div class="grid grid-cols-2">
       <.player_scorecard
         :for={{name, player} <- @players}

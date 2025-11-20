@@ -80,7 +80,8 @@ defmodule ElixirCollectathon.Games.Server do
       # => :ok
   """
 
-  @spec join(String.t(), String.t()) :: :ok | {:error, :max_players_reached} | {:error, :already_added} | {:error, atom()}
+  @spec join(String.t(), String.t()) ::
+          :ok | {:error, :max_players_reached} | {:error, :already_added} | {:error, atom()}
   def join(game_id, player_name) do
     GenServer.call(via_tuple(game_id), {:join, player_name})
   end
@@ -162,26 +163,28 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
-  @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) :: {:reply, :ok | {:error, :max_players_reached} | {:error, :already_added}, Game.t()}
+  @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) ::
+          {:reply, :ok | {:error, :max_players_reached} | {:error, :already_added}, Game.t()}
   def handle_call({:join, player_name}, _from, %Game{} = state) do
     if has_four_players?(state.players) do
       {:reply, {:error, :max_players_reached}, state}
     else
       case Game.has_player?(state, player_name) do
         false ->
-          # new_state =
-          #   Game.add_player(state, Player.new(player_name, state.next_player_num))
+          new_state =
+            state
+            |> Game.add_player(Player.new(player_name, state.next_player_num))
+
+          broadcast(new_state)
 
           {
             :reply,
             :ok,
-            state
-            |> Game.add_player(Player.new(player_name, state.next_player_num))
+            new_state
           }
 
         true ->
           {:reply, {:error, :already_added}, state}
-
       end
     end
   end
@@ -197,7 +200,8 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
-  @spec handle_cast({:velocity, String.t(), {integer(), integer()}}, Game.t()) :: {:noreply, Game.t()}
+  @spec handle_cast({:velocity, String.t(), {integer(), integer()}}, Game.t()) ::
+          {:noreply, Game.t()}
   def handle_cast({:velocity, player_name, {x, y}}, %Game{} = state) do
     players =
       state.players
@@ -258,7 +262,7 @@ defmodule ElixirCollectathon.Games.Server do
     Player.set_position(player, new_position)
   end
 
-  @spec clamp(non_neg_integer() , 0, non_neg_integer()) :: non_neg_integer()
+  @spec clamp(non_neg_integer(), 0, non_neg_integer()) :: non_neg_integer()
   defp clamp(v, min, max), do: max(min(v, max), min)
 
   @spec has_four_players?(%{optional(String.t()) => Player.t()}) :: boolean()

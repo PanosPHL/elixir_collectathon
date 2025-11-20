@@ -36,6 +36,16 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
       # (We can't easily test the push_event without more setup, but we can verify it doesn't crash)
       assert render(view) =~ "Alice"
     end
+
+    test "renders QR code", %{conn: conn} do
+      {:ok, game_id} = Supervisor.create_game()
+      {:ok, view, _html} = live(conn, Routes.game(game_id))
+
+      # Wait for async assignment to complete
+      Process.sleep(100)
+
+      assert render(view) =~ "<svg"
+    end
   end
 
   describe "handle_info/2" do

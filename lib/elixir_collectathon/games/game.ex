@@ -16,12 +16,12 @@ defmodule ElixirCollectathon.Games.Game do
   alias ElixirCollectathon.Players.Player
 
   @type t() :: %__MODULE__{
-    game_id: String.t(),
-    tick_count: non_neg_integer(),
-    is_running: boolean(),
-    players: %{optional(String.t()) => Player.t()},
-    next_player_num: pos_integer()
-  }
+          game_id: String.t(),
+          tick_count: non_neg_integer(),
+          is_running: boolean(),
+          players: %{optional(String.t()) => Player.t()},
+          next_player_num: pos_integer()
+        }
 
   @map_size {1024, 576}
 
