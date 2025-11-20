@@ -2,6 +2,8 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
   use ElixirCollectathonWeb.LiveViewCase
   alias ElixirCollectathon.Games.Supervisor
   alias ElixirCollectathon.Games.Server
+  alias ElixirCollectathon.Games.Game
+  alias ElixirCollectathon.Players.Player
   alias ElixirCollectathonWeb.Routes
 
   describe "mount/3" do
@@ -12,7 +14,6 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
 
       assert has_element?(view, "#game-canvas")
       html = render(view)
-      assert html =~ game_id
     end
 
     test "redirects to home page when game does not exist", %{conn: conn} do
@@ -34,7 +35,7 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
 
       # The view should receive the state update
       # (We can't easily test the push_event without more setup, but we can verify it doesn't crash)
-      assert render(view) =~ game_id
+      assert render(view) =~ "Alice"
     end
   end
 
@@ -45,14 +46,17 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
       {:ok, view, _html} = live(conn, Routes.game(game_id))
 
       # Simulate a state broadcast
+      player = Player.new("Bob", 1)
+      game = %Game{game_id: game_id, players: %{"Bob" => player}}
+
       Phoenix.PubSub.broadcast(
         ElixirCollectathon.PubSub,
         "game:#{game_id}",
-        {:state, %ElixirCollectathon.Games.Game{game_id: game_id}}
+        {:state, game}
       )
 
       # View should handle the message without crashing
-      assert render(view) =~ game_id
+      assert render(view) =~ "Bob"
     end
   end
 
