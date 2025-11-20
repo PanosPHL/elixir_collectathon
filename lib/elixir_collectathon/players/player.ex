@@ -23,7 +23,8 @@ defmodule ElixirCollectathon.Players.Player do
     name: String.t(),
     position: {non_neg_integer(), non_neg_integer()},
     velocity: {non_neg_integer(), non_neg_integer()},
-    inventory: String.t()
+    inventory: String.t(),
+    player_num: pos_integer()
   }
 
   @player_lw 40
@@ -36,7 +37,7 @@ defmodule ElixirCollectathon.Players.Player do
   }
 
   @derive Jason.Encoder
-  defstruct color: "red", name: "", position: {0, 0}, velocity: {0, 0}, inventory: ""
+  defstruct color: "red", name: "", position: {0, 0}, velocity: {0, 0}, inventory: "", player_num: 1
 
   @doc """
   Creates a new player with the given name and player number.
@@ -74,7 +75,8 @@ defmodule ElixirCollectathon.Players.Player do
     %Player{
       name: name,
       color: @player_colors[player_num],
-      position: position
+      position: position,
+      player_num: player_num
     }
   end
 

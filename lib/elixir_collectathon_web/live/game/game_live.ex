@@ -13,28 +13,36 @@ defmodule ElixirCollectathonWeb.GameLive do
   alias Phoenix.PubSub
   alias ElixirCollectathon.Games.Game
   alias ElixirCollectathon.Games.Server, as: GameServer
+  alias ElixirCollectathonWeb.Routes
   use ElixirCollectathonWeb, :live_view
 
   @doc """
   Mounts the LiveView and subscribes to game state updates.
 
   Verifies the game exists before subscribing. If the game doesn't exist,
-  the socket is returned without subscription (TODO: handle redirect).
+  the user is redirected to the home page.
   """
 
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(%{"id" => game_id}, _session, socket) do
     case GenServer.whereis(GameServer.via_tuple(game_id)) do
       nil ->
-        # TO DO: Handle redirect to different LiveView if a GenServer process with the associated game_id doesn't
-        # exist
-        {:ok, socket}
+        {
+          :ok,
+          socket
+          |> put_flash(:error, "Game not found.")
+          |> redirect(to: Routes.home())
+        }
 
       _ ->
         if connected?(socket),
           do: PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
 
-        {:ok, assign(socket, game_id: game_id)}
+        {
+          :ok,
+          socket
+          |> assign(game_id: game_id)
+        }
     end
   end
 
@@ -47,6 +55,10 @@ defmodule ElixirCollectathonWeb.GameLive do
   @spec handle_info({atom(), Game.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:state, state}, socket) do
-    {:noreply, push_event(socket, "game_update", state)}
+    {
+      :noreply,
+      socket
+      |> push_event("game_update", state)
+    }
   end
 end

@@ -19,7 +19,7 @@ defmodule ElixirCollectathon.Games.Game do
     game_id: String.t(),
     tick_count: non_neg_integer(),
     is_running: boolean(),
-    players: %{optional(String.t()) => Player.player()},
+    players: %{optional(String.t()) => Player.t()},
     next_player_num: pos_integer()
   }
 
@@ -66,13 +66,44 @@ defmodule ElixirCollectathon.Games.Game do
       true
   """
 
-  @spec add_player(Game.t(), Player.player()) :: Game.t()
+  @spec add_player(Game.t(), Player.t()) :: Game.t()
   def add_player(%Game{} = game, %Player{} = player) do
     %Game{
       game
       | players: Map.put(game.players, player.name, player),
         next_player_num: game.next_player_num + 1
     }
+  end
+
+  @doc """
+  Removes a player from the game.
+
+  Removes the player from the player map and updates the next_player_num, should another
+  player want to join the game in their stead, to the removed player's player_num.
+
+  ## Parameters
+  - `game` - The game struct to remove the player from
+  - `player_name` - The name of the player/key of the players map to remove from the game
+
+  ## Examples
+
+      iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+      iex> player1 = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> player2 = ElixirCollectathon.Players.Player.new("Bob", 2)
+      iex> updated_game = game
+      ...> |> ElixirCollectathon.Games.Game.add_player(player1)
+      ...> |> ElixirCollectathon.Games.Game.add_player(player2)
+      ...> |> ElixirCollectathon.Games.Game.remove_player("Alice")
+      iex> Map.has_key?(updated_game.players, "Alice")
+      false
+  """
+
+  @spec remove_player(ElixirCollectathon.Games.Game.t(), String.t()) ::
+          ElixirCollectathon.Games.Game.t()
+  def remove_player(%Game{} = game, player_name) do
+    {%Player{} = player, updated_players} = Map.pop(game.players, player_name)
+
+    %Game{game | players: updated_players, next_player_num: player.player_num}
   end
 
   @doc """
@@ -107,7 +138,7 @@ defmodule ElixirCollectathon.Games.Game do
       "Alice"
   """
 
-  @spec set_players(Game.t(), %{optional(String.t()) => Player.player()}) :: Game.t()
+  @spec set_players(Game.t(), %{optional(String.t()) => Player.t()}) :: Game.t()
   def set_players(%Game{} = game, players) do
     %Game{game | players: players}
   end

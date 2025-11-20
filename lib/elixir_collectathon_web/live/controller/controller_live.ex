@@ -10,6 +10,7 @@ defmodule ElixirCollectathonWeb.ControllerLive do
   Players use this view to control their character in the game.
   """
   alias ElixirCollectathon.Games.Server, as: GameServer
+  alias ElixirCollectathonWeb.Routes
   use ElixirCollectathonWeb, :live_view
 
   @doc """
@@ -24,8 +25,17 @@ defmodule ElixirCollectathonWeb.ControllerLive do
     {
       :ok,
       socket
-      |> put_flash(:info, "Successfully joined game")
+      |> put_flash(:info, "Successfully joined game.")
       |> assign(player_name: player_name, game_id: game_id)
+    }
+  end
+
+  def mount(_params, _session, socket) do
+    {
+      :ok,
+      socket
+      |> put_flash(:error, "You are not currently in this game, please join a game to continue.")
+      |> push_navigate(to: Routes.home())
     }
   end
 

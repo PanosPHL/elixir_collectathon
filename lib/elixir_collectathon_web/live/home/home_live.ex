@@ -105,14 +105,20 @@ defmodule ElixirCollectathonWeb.HomeLive do
         }
 
       {:error, :max_retries} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "There was an issue creating a game, try again later.")}
+        {
+          :noreply,
+          socket
+          |> put_flash(:error, "There was an issue creating a game, try again later.")
+        }
     end
   end
 
   def handle_event("change_form_view", %{"form_view" => form_view}, socket) do
-    {:noreply, assign(socket, form_view: form_view)}
+    {
+      :noreply,
+      socket
+      |> assign(form_view: form_view, join_game_form: to_form(%{"player_name" => "", "game_id" => ""}))
+    }
   end
 
   def handle_event(
