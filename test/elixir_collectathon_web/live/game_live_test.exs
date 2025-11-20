@@ -13,7 +13,6 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
       {:ok, view, _html} = live(conn, Routes.game(game_id))
 
       assert has_element?(view, "#game-canvas")
-      html = render(view)
     end
 
     test "redirects to home page when game does not exist", %{conn: conn} do

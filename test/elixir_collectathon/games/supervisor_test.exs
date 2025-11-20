@@ -41,13 +41,7 @@ defmodule ElixirCollectathon.Games.SupervisorTest do
     end
 
     test "returns error after max retries" do
-      # This is difficult to test directly without mocking,
-      # but we can verify the function signature and error handling
-      # The actual max_retries scenario would require forcing collisions
-      # which is unlikely in practice
-      result = Supervisor.create_game()
-
-      assert match?({:ok, _}, result)
+      assert {:error, :max_retries} = Supervisor.create_game(6)
     end
   end
 end
