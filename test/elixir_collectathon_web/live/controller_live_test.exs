@@ -2,7 +2,6 @@ defmodule ElixirCollectathonWeb.ControllerLiveTest do
   use ElixirCollectathonWeb.LiveViewCase
   alias ElixirCollectathon.Games.Supervisor
   alias ElixirCollectathon.Games.Server
-  alias ElixirCollectathon.Games.Server, as: GameServer
   alias ElixirCollectathonWeb.Routes
 
   describe "mount/3" do
@@ -54,12 +53,10 @@ defmodule ElixirCollectathonWeb.ControllerLiveTest do
         |> init_test_session(%{})
         |> put_session("player", "Alice")
 
-      {:ok, _view, _html} = live(conn, Routes.controller(game_id))
+      {:ok, view, _html} = live(conn, Routes.controller(game_id))
 
-      # Test the handle_event directly by simulating the event
-      # Since joystick_move is triggered by JavaScript, we test the server interaction
-      # The actual event handling is tested in the GameServer tests
-      GameServer.update_velocity(game_id, "Alice", {0.5, -0.5})
+      # Trigger the event via the view
+      render_hook(view, "joystick_move", %{"x" => 0.5, "y" => -0.5})
 
       # Wait for the cast to process
       Process.sleep(50)

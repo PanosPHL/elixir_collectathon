@@ -16,6 +16,35 @@ defmodule ElixirCollectathonWeb.GameLive do
   alias ElixirCollectathonWeb.Routes
   use ElixirCollectathonWeb, :live_view
 
+  attr :name, :string, required: true
+  attr :color, :string, required: true
+  attr :inventory, :string, required: true
+  attr :letters, :list, required: true
+
+  def player_scorecard(assigns) do
+    ~H"""
+    <div class="flex flex-col p-4 gap-3 rounded-lg bg-base-200 shadow-lg">
+      <div class="flex items-center gap-3">
+        <div class="w-4 h-4 rounded-full ring-2 ring-offset-2 ring-offset-base-200" style={"background-color: #{@color};"}></div>
+        <h3 class="font-bold text-lg">{@name}</h3>
+      </div>
+      <div class="flex flex-wrap gap-1">
+        <%= for {letter, collected} <- Enum.zip(@letters, @inventory) do %>
+      <%= if letter == collected do %>
+        <span class="flex items-center justify-center w-8 h-8 rounded bg-primary text-primary-content font-bold shadow-sm">
+          {letter}
+        </span>
+      <% else %>
+        <span class="flex items-center justify-center w-8 h-8 rounded bg-base-300/50 text-base-content/20 font-bold opacity-50">
+          {letter}
+        </span>
+      <% end %>
+    <% end %>
+      </div>
+    </div>
+    """
+  end
+
   @doc """
   Mounts the LiveView and subscribes to game state updates.
 
@@ -41,7 +70,7 @@ defmodule ElixirCollectathonWeb.GameLive do
         {
           :ok,
           socket
-          |> assign(game_id: game_id)
+          |> assign(game_id: game_id, players: %{}, letters: ~w"E L I X I R")
         }
     end
   end
@@ -54,10 +83,11 @@ defmodule ElixirCollectathonWeb.GameLive do
 
   @spec handle_info({atom(), Game.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:state, state}, socket) do
+  def handle_info({:state, %Game{} = state}, socket) do
     {
       :noreply,
       socket
+      |> assign(players: state.players)
       |> push_event("game_update", state)
     }
   end

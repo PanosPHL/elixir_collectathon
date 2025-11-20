@@ -19,13 +19,13 @@ defmodule ElixirCollectathon.Players.Player do
   alias __MODULE__
 
   @type t() :: %__MODULE__{
-    color: String.t(),
-    name: String.t(),
-    position: {non_neg_integer(), non_neg_integer()},
-    velocity: {non_neg_integer(), non_neg_integer()},
-    inventory: String.t(),
-    player_num: pos_integer()
-  }
+          color: String.t(),
+          name: String.t(),
+          position: {non_neg_integer(), non_neg_integer()},
+          velocity: {non_neg_integer(), non_neg_integer()},
+          inventory: list(String.t() | nil),
+          player_num: pos_integer()
+        }
 
   @player_lw 40
 
@@ -37,7 +37,12 @@ defmodule ElixirCollectathon.Players.Player do
   }
 
   @derive Jason.Encoder
-  defstruct color: "red", name: "", position: {0, 0}, velocity: {0, 0}, inventory: "", player_num: 1
+  defstruct color: "red",
+            name: "",
+            position: {0, 0},
+            velocity: {0, 0},
+            inventory: [nil, nil, nil, nil, nil, nil],
+            player_num: 1
 
   @doc """
   Creates a new player with the given name and player number.

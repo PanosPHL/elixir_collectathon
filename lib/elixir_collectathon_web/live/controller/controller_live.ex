@@ -18,6 +18,8 @@ defmodule ElixirCollectathonWeb.ControllerLive do
 
   The player name is retrieved from the session set by the GameController
   when the player successfully joins a game.
+
+  If no player is found in the session, the user is redirected to the home page.
   """
 
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
@@ -34,7 +36,7 @@ defmodule ElixirCollectathonWeb.ControllerLive do
     {
       :ok,
       socket
-      |> put_flash(:error, "You are not currently in this game, please join a game to continue.")
+      |> put_flash(:error, "You are not currently in this game, please join a game to play.")
       |> push_navigate(to: Routes.home())
     }
   end

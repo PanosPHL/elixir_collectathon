@@ -80,11 +80,26 @@ defmodule ElixirCollectathon.Games.Server do
       # => :ok
   """
 
-  @spec join(String.t(), String.t()) :: :ok | {:error, :max_players_reached} | {:error, :already_added}
+  @spec join(String.t(), String.t()) :: :ok | {:error, :max_players_reached} | {:error, :already_added} | {:error, atom()}
   def join(game_id, player_name) do
     GenServer.call(via_tuple(game_id), {:join, player_name})
   end
 
+  @doc """
+  Removes a player from the game.
+
+  ## Parameters
+    - `game_id` - The ID of the game to leave
+    - `player_name` - The name of the player leaving
+
+  ## Returns
+    - `:ok` - The request to leave was sent successfully
+
+  ## Examples
+
+      Server.leave("ABC123", "Alice")
+      # => :ok
+  """
   @spec leave(String.t(), String.t()) :: :ok
   def leave(game_id, player_name) do
     GenServer.cast(via_tuple(game_id), {:leave, player_name})
@@ -139,7 +154,11 @@ defmodule ElixirCollectathon.Games.Server do
   @spec init(String.t()) :: {:ok, Game.t()}
   def init(game_id) do
     :timer.send_interval(@tick_rate, :tick)
-    {:ok, Game.new(game_id)}
+    {
+      :ok,
+      game_id
+      |> Game.new()
+    }
   end
 
   @impl GenServer
@@ -150,10 +169,15 @@ defmodule ElixirCollectathon.Games.Server do
     else
       case Game.has_player?(state, player_name) do
         false ->
-          new_state =
-            Game.add_player(state, Player.new(player_name, state.next_player_num))
+          # new_state =
+          #   Game.add_player(state, Player.new(player_name, state.next_player_num))
 
-          {:reply, :ok, new_state}
+          {
+            :reply,
+            :ok,
+            state
+            |> Game.add_player(Player.new(player_name, state.next_player_num))
+          }
 
         true ->
           {:reply, {:error, :already_added}, state}
@@ -165,7 +189,11 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec handle_cast({:leave, String.t()}, Game.t()) :: {:noreply, Game.t()}
   def handle_cast({:leave, player_name}, %Game{} = state) do
-    {:noreply, Game.remove_player(state, player_name)}
+    {
+      :noreply,
+      state
+      |> Game.remove_player(player_name)
+    }
   end
 
   @impl GenServer
@@ -175,7 +203,11 @@ defmodule ElixirCollectathon.Games.Server do
       state.players
       |> Map.replace(player_name, Player.set_velocity(state.players[player_name], {x, y}))
 
-    {:noreply, Game.set_players(state, players)}
+    {
+      :noreply,
+      state
+      |> Game.set_players(players)
+    }
   end
 
   @impl GenServer

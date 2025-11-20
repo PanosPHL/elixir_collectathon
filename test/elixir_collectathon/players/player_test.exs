@@ -12,7 +12,7 @@ defmodule ElixirCollectathon.Players.PlayerTest do
       assert player.color == "red"
       assert player.position == {0, 0}
       assert player.velocity == {0, 0}
-      assert player.inventory == ""
+      assert player.inventory == [nil, nil, nil, nil, nil, nil]
     end
 
     test "creates a player with correct position for player 2" do
