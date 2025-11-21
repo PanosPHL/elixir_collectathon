@@ -124,4 +124,34 @@ defmodule ElixirCollectathon.Players.Player do
   def set_position(%Player{} = player, position) do
     %Player{player | position: position}
   end
+
+  def add_collected_letter(%Player{} = player, letter) do
+    updated_inventory =
+      case letter do
+        "E" ->
+          List.replace_at(player.inventory, 0, letter)
+
+        "L" ->
+          List.replace_at(player.inventory, 1, letter)
+
+        "I" ->
+          if Enum.at(player.inventory, 2) == nil do
+            List.replace_at(player.inventory, 2, letter)
+          else
+            List.replace_at(player.inventory, 4, letter)
+          end
+
+        "X" ->
+          List.replace_at(player.inventory, 3, letter)
+
+        "R" ->
+          List.replace_at(player.inventory, 5, letter)
+      end
+
+    %Player{player | inventory: updated_inventory}
+  end
+
+  def get_player_size() do
+    @player_lw
+  end
 end
