@@ -107,12 +107,20 @@ defmodule ElixirCollectathonWeb.CoreComponents do
       nil => ""
     }
 
+    sizes = %{
+      "xs" => "btn-xs",
+      "sm" => "btn-sm",
+      "md" => "btn-md",
+      "lg" => "btn-lg",
+      "xl" => "btn-xl"
+    }
+
     assigns =
       assign_new(assigns, :class, fn ->
         [
           "btn",
           Map.fetch!(variants, assigns[:variant]),
-          assigns[:size] && "btn-#{assigns[:size]}",
+          Map.fetch!(sizes, assigns[:size]),
           assigns[:outline] && "btn-outline",
           assigns[:soft] && "btn-soft",
           assigns[:block] && "btn-block"

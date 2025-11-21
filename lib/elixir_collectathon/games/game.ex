@@ -16,17 +16,23 @@ defmodule ElixirCollectathon.Games.Game do
   alias ElixirCollectathon.Players.Player
 
   @type t() :: %__MODULE__{
-    game_id: String.t(),
-    tick_count: non_neg_integer(),
-    is_running: boolean(),
-    players: %{optional(String.t()) => Player.t()},
-    next_player_num: pos_integer()
-  }
+          game_id: String.t(),
+          tick_count: non_neg_integer(),
+          is_running: boolean(),
+          players: %{optional(String.t()) => Player.t()},
+          next_player_num: pos_integer(),
+          countdown: pos_integer() | String.t()
+        }
 
   @map_size {1024, 576}
 
   @derive Jason.Encoder
-  defstruct game_id: "", tick_count: 0, is_running: true, players: %{}, next_player_num: 1
+  defstruct game_id: "",
+            tick_count: 0,
+            is_running: false,
+            players: %{},
+            next_player_num: 1,
+            countdown: 3
 
   @doc """
   Creates a new game instance with the given game ID.
@@ -164,5 +170,52 @@ defmodule ElixirCollectathon.Games.Game do
   @spec has_player?(Game.t(), String.t()) :: boolean()
   def has_player?(%Game{} = game, player_name) do
     Map.has_key?(game.players, player_name)
+  end
+
+  @doc """
+  Decrements the countdown to starting a game
+
+  ## Parameters
+  - `game` - The game struct to modify the countdown on
+
+  ## Examples
+
+    iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+    ...> |> ElixirCollectathon.Games.Game.countdown_to_start()
+    ...> |> ElixirCollectathon.Games.Game.countdown_to_start()
+    ...> |> ElixirCollectathon.Games.Game.countdown_to_start()
+    iex> game.countdown
+    "GO!"
+  """
+
+  @spec countdown_to_start(Game.t()) :: Game.t()
+  def countdown_to_start(%Game{countdown: countdown} = game)
+      when is_integer(countdown) and countdown > 1 do
+    %Game{game | countdown: countdown - 1}
+  end
+
+  def countdown_to_start(%Game{countdown: 1} = game) do
+    %Game{game | countdown: "GO!"}
+  end
+
+  @doc """
+  Starts the game
+
+  ## Parameters
+  - `game` - The game struct to start
+
+  ## Examples
+    iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+    ...> |> ElixirCollectathon.Games.Game.countdown_to_start()
+    ...> |> ElixirCollectathon.Games.Game.countdown_to_start()
+    ...> |> ElixirCollectathon.Games.Game.countdown_to_start()
+    ...> |> ElixirCollectathon.Games.Game.start()
+    iex> game.is_running
+    true
+  """
+
+  @spec start(Game.t()) :: Game.t()
+  def start(%Game{} = game) do
+    %Game{game | is_running: true}
   end
 end

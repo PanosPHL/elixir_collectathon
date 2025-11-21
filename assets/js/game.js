@@ -6,7 +6,6 @@ export default {
 		const boxLengthWidth = 40;
 
 		this.handleEvent('game_update', (newState) => {
-			console.log(newState);
 			state = newState;
 		});
 
@@ -17,7 +16,6 @@ export default {
 				const player = state.players[id];
 				const [playerX, playerY] = player.position;
 
-				console.log(player.position);
 
 				ctx.fillStyle = player.color;
 				ctx.fillRect(playerX, playerY, boxLengthWidth, boxLengthWidth);

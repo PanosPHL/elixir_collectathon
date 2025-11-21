@@ -15,6 +15,7 @@ defmodule ElixirCollectathon.Games.Server do
   alias Phoenix.PubSub
   alias ElixirCollectathon.Games.Game
   alias ElixirCollectathon.Players.Player
+  alias __MODULE__, as: GameServer
   use GenServer
 
   # 30 Hz
@@ -80,7 +81,8 @@ defmodule ElixirCollectathon.Games.Server do
       # => :ok
   """
 
-  @spec join(String.t(), String.t()) :: :ok | {:error, :max_players_reached} | {:error, :already_added} | {:error, atom()}
+  @spec join(String.t(), String.t()) ::
+          :ok | {:error, :max_players_reached} | {:error, :already_added} | {:error, atom()}
   def join(game_id, player_name) do
     GenServer.call(via_tuple(game_id), {:join, player_name})
   end
@@ -103,6 +105,44 @@ defmodule ElixirCollectathon.Games.Server do
   @spec leave(String.t(), String.t()) :: :ok
   def leave(game_id, player_name) do
     GenServer.cast(via_tuple(game_id), {:leave, player_name})
+  end
+
+  @doc """
+  Begins the countdown to start a game.
+
+  ## Parameters
+  - `game_id` - The ID of the game to begin the countdown on
+
+  ## Returns
+  - `:ok` - The request to begin the countdown was sent successfully
+
+  ## Examples
+
+    Server.start_countdown("ABC123")
+    # => :ok
+  """
+
+  @spec start_countdown(String.t()) :: :ok
+  def start_countdown(game_id) do
+    GenServer.cast(via_tuple(game_id), :start_countdown)
+  end
+
+  @doc """
+  Starts the game instance, usually after the countdown has completed.
+
+  ## Parameters
+    - `game_id` - The ID of the game to start
+
+  ## Returns
+    - `:ok` - The request to start the game was sent successfully
+
+  ## Examples
+
+      Server.start_game("ABC123")
+      # => :ok
+  """
+  def start_game(game_id) do
+    GenServer.cast(via_tuple(game_id), :start_game)
   end
 
   @doc """
@@ -153,7 +193,6 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec init(String.t()) :: {:ok, Game.t()}
   def init(game_id) do
-    :timer.send_interval(@tick_rate, :tick)
     {
       :ok,
       game_id
@@ -162,26 +201,28 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
-  @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) :: {:reply, :ok | {:error, :max_players_reached} | {:error, :already_added}, Game.t()}
+  @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) ::
+          {:reply, :ok | {:error, :max_players_reached} | {:error, :already_added}, Game.t()}
   def handle_call({:join, player_name}, _from, %Game{} = state) do
     if has_four_players?(state.players) do
       {:reply, {:error, :max_players_reached}, state}
     else
       case Game.has_player?(state, player_name) do
         false ->
-          # new_state =
-          #   Game.add_player(state, Player.new(player_name, state.next_player_num))
+          new_state =
+            state
+            |> Game.add_player(Player.new(player_name, state.next_player_num))
+
+          broadcast(new_state)
 
           {
             :reply,
             :ok,
-            state
-            |> Game.add_player(Player.new(player_name, state.next_player_num))
+            new_state
           }
 
         true ->
           {:reply, {:error, :already_added}, state}
-
       end
     end
   end
@@ -189,15 +230,40 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec handle_cast({:leave, String.t()}, Game.t()) :: {:noreply, Game.t()}
   def handle_cast({:leave, player_name}, %Game{} = state) do
-    {
-      :noreply,
+    new_state =
       state
       |> Game.remove_player(player_name)
-    }
+
+    broadcast(new_state)
+
+    {:noreply, new_state}
   end
 
   @impl GenServer
-  @spec handle_cast({:velocity, String.t(), {integer(), integer()}}, Game.t()) :: {:noreply, Game.t()}
+  @spec handle_cast(:start_countdown, Game.t()) :: {:noreply, Game.t()}
+  def handle_cast(:start_countdown, %Game{} = state) do
+    Process.send_after(self(), :countdown_tick, 1000)
+
+    broadcast(state.game_id, {:countdown, state.countdown})
+
+    {:noreply, state |> Game.countdown_to_start()}
+  end
+
+  @impl GenServer
+  @spec handle_cast(:start_game, Game.t()) :: {:noreply, Game.t()}
+  def handle_cast(:start_game, %Game{} = state) do
+    :timer.send_interval(@tick_rate, :tick)
+
+    new_state = state |> Game.start()
+
+    broadcast(new_state.game_id, :game_started)
+
+    {:noreply, state |> Game.start()}
+  end
+
+  @impl GenServer
+  @spec handle_cast({:velocity, String.t(), {integer(), integer()}}, Game.t()) ::
+          {:noreply, Game.t()}
   def handle_cast({:velocity, player_name, {x, y}}, %Game{} = state) do
     players =
       state.players
@@ -208,6 +274,24 @@ defmodule ElixirCollectathon.Games.Server do
       state
       |> Game.set_players(players)
     }
+  end
+
+  @impl GenServer
+  @spec handle_info(:countdown_tick, Game.t()) :: {:noreply, Game.t()}
+  def handle_info(:countdown_tick, %Game{countdown: n} = state) when is_integer(n) and n > 0 do
+    broadcast(state.game_id, {:countdown, n})
+
+    Process.send_after(self(), :countdown_tick, 1000)
+
+    {:noreply, state |> Game.countdown_to_start()}
+  end
+
+  def handle_info(:countdown_tick, %Game{countdown: "GO!"} = state) do
+    broadcast(state.game_id, {:countdown, state.countdown})
+
+    :timer.apply_after(1000, fn -> GameServer.start_game(state.game_id) end)
+
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -222,6 +306,14 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   # Private functions
+  defp broadcast(game_id, payload) do
+    PubSub.broadcast(
+      ElixirCollectathon.PubSub,
+      "game:#{game_id}",
+      payload
+    )
+  end
+
   @spec broadcast(Game.t()) :: :ok
   defp broadcast(%Game{} = state) do
     PubSub.broadcast(
@@ -258,7 +350,7 @@ defmodule ElixirCollectathon.Games.Server do
     Player.set_position(player, new_position)
   end
 
-  @spec clamp(non_neg_integer() , 0, non_neg_integer()) :: non_neg_integer()
+  @spec clamp(non_neg_integer(), 0, non_neg_integer()) :: non_neg_integer()
   defp clamp(v, min, max), do: max(min(v, max), min)
 
   @spec has_four_players?(%{optional(String.t()) => Player.t()}) :: boolean()

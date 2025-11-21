@@ -15,7 +15,9 @@ defmodule ElixirCollectathonWeb.Routes do
       Routes.home()
       # => ~p"/"
   """
-  def home, do: ~p"/"
+  def home(), do: ~p"/"
+
+  def home(form_view), do: ~p"/?form_view=#{form_view}"
 
   @doc """
   Returns the path to a game view.

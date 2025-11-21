@@ -58,9 +58,37 @@ defmodule ElixirCollectathonWeb.HomeLive do
 
   Sets up empty forms for creating and joining games.
   """
-  @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
+  @spec mount(map(), %{optional(String.t()) => String.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def mount(_, %{"form_view" => form_view, "game_id" => game_id}, socket) do
+    {
+      :ok,
+      socket
+      |> assign(
+        create_game_form: to_form(%{}),
+        join_game_form: to_form(%{"player_name" => "", "game_id" => game_id}),
+        trigger_join_game: false,
+        form_view: form_view
+      )
+    }
+  end
+
+  def mount(_, %{"form_view" => form_view}, socket) do
+    {
+      :ok,
+      socket
+      |> assign(
+        create_game_form: to_form(%{}),
+        join_game_form: to_form(%{"player_name" => "", "game_id" => ""}),
+        trigger_join_game: false,
+        form_view: form_view
+      )
+    }
+  end
+
   def mount(_, _, socket) do
-    socket =
+    {
+      :ok,
       socket
       |> assign(
         create_game_form: to_form(%{}),
@@ -68,8 +96,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
         trigger_join_game: false,
         form_view: "create-and-join"
       )
-
-    {:ok, socket}
+    }
   end
 
   @doc """
@@ -117,7 +144,10 @@ defmodule ElixirCollectathonWeb.HomeLive do
     {
       :noreply,
       socket
-      |> assign(form_view: form_view, join_game_form: to_form(%{"player_name" => "", "game_id" => ""}))
+      |> assign(
+        form_view: form_view,
+        join_game_form: to_form(%{"player_name" => "", "game_id" => ""})
+      )
     }
   end
 

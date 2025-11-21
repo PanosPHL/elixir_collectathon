@@ -1,13 +1,37 @@
 <Layouts.app flash={@flash}>
   <div class="flex flex-col w-full gap-4 max-w-5xl">
-    <canvas
-      class="block w-full aspect-video border border-base-content"
-      id="game-canvas"
-      height="576"
-      width="1024"
-      phx-hook="Game"
-    >
-    </canvas>
+    <div class="relative">
+      <%= if not @game_started do %>
+        <div class="absolute top-1/2 left-1/2 flex flex-col items-center translate-[-50%]">
+          <%= if @countdown do %>
+            <h1 class="text-8xl font-bold text-center" id="game-countdown">
+              {@countdown}
+            </h1>
+          <% else %>
+          <div class="flex flex-col items-center" id="game-qr-code">
+            <.async_result :let={qr_code} assign={@qr_code}>
+              <:loading><span class="loading loading-bars loading-xl scale-300"></span></:loading>
+              <:failed :let={_failure}>
+                <h1>{@game_id}</h1>
+              </:failed>
+              <div class="scale-75">{raw(elem(qr_code, 1))}</div>
+              <.button size="xl" variant="primary" phx-click="start_countdown">
+                Start Game
+              </.button>
+            </.async_result>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+      <canvas
+        class="block w-full aspect-video border border-base-content"
+        id="game-canvas"
+        height="576"
+        width="1024"
+        phx-hook="Game"
+      >
+      </canvas>
+    </div>
     <div class="grid grid-cols-2">
       <.player_scorecard
         :for={{name, player} <- @players}

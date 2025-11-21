@@ -32,9 +32,29 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
       # Wait for the broadcast
       Process.sleep(100)
 
-      # The view should receive the state update
-      # (We can't easily test the push_event without more setup, but we can verify it doesn't crash)
       assert render(view) =~ "Alice"
+    end
+
+    test "renders QR code", %{conn: conn} do
+      {:ok, game_id} = Supervisor.create_game()
+      {:ok, view, _html} = live(conn, Routes.game(game_id))
+
+      # Wait for async assignment to complete
+      Process.sleep(100)
+
+      assert render(view) =~ "<svg"
+    end
+
+    test "renders canvas with correct attributes", %{conn: conn} do
+      {:ok, game_id} = Supervisor.create_game()
+
+      {:ok, view, _html} = live(conn, Routes.game(game_id))
+
+      assert has_element?(view, "#game-canvas")
+      html = render(view)
+      assert html =~ "width=\"1024\""
+      assert html =~ "height=\"576\""
+      assert html =~ "phx-hook=\"Game\""
     end
   end
 
@@ -59,17 +79,40 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
     end
   end
 
-  describe "game canvas" do
-    test "renders canvas with correct attributes", %{conn: conn} do
+  describe "countdown" do
+    test "handles countdown updates from PubSub", %{conn: conn} do
       {:ok, game_id} = Supervisor.create_game()
 
       {:ok, view, _html} = live(conn, Routes.game(game_id))
 
+      # Simulate a countdown broadcast
+      Phoenix.PubSub.broadcast(
+        ElixirCollectathon.PubSub,
+        "game:#{game_id}",
+        {:countdown, 3}
+      )
+
+      # View should handle the message without crashing
+      assert render(view) =~ "3"
+    end
+  end
+
+  describe "game start" do
+    test "handles game start from PubSub", %{conn: conn} do
+      {:ok, game_id} = Supervisor.create_game()
+
+      {:ok, view, _html} = live(conn, Routes.game(game_id))
+
+      # Simulate a game start broadcast
+      Phoenix.PubSub.broadcast(
+        ElixirCollectathon.PubSub,
+        "game:#{game_id}",
+        :game_started
+      )
+
+      refute has_element?(view, "#game-countdown")
+      refute has_element?(view, "#game-qr-code")
       assert has_element?(view, "#game-canvas")
-      html = render(view)
-      assert html =~ "width=\"1024\""
-      assert html =~ "height=\"576\""
-      assert html =~ "phx-hook=\"Game\""
     end
   end
 end
