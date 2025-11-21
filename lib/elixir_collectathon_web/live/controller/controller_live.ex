@@ -11,6 +11,7 @@ defmodule ElixirCollectathonWeb.ControllerLive do
   """
   alias ElixirCollectathon.Games.Server, as: GameServer
   alias ElixirCollectathonWeb.Routes
+  alias Phoenix.PubSub
   use ElixirCollectathonWeb, :live_view
 
   @doc """
@@ -24,11 +25,18 @@ defmodule ElixirCollectathonWeb.ControllerLive do
 
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(%{"game_id" => game_id}, %{"player" => player_name}, socket) do
+    if connected?(socket), do: PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
+
     {
       :ok,
       socket
       |> put_flash(:info, "Successfully joined game.")
-      |> assign(player_name: player_name, game_id: game_id)
+      |> assign(
+        player_name: player_name,
+        game_id: game_id,
+        game_is_running: false,
+        countdown: nil
+      )
     }
   end
 
@@ -56,6 +64,31 @@ defmodule ElixirCollectathonWeb.ControllerLive do
 
     GameServer.update_velocity(game_id, player_name, {x, y})
 
+    {:noreply, socket}
+  end
+
+  @doc """
+  Handles messages sent from the game server.
+
+  - `{:countdown, countdown}`: Updates the countdown timer displayed to players.
+  - `:game_started`: Marks the game as started in the LiveView state.
+  - Any other messages are ignored.
+  """
+
+  @spec handle_info({:countdown, pos_integer() | String.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:countdown, countdown}, socket) do
+    {:noreply, socket |> assign(countdown: countdown)}
+  end
+
+  @spec handle_info(:game_started, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info(:game_started, socket) do
+    {:noreply, socket |> assign(game_is_running: true)}
+  end
+
+  @spec handle_info(any(), Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info(_, socket) do
     {:noreply, socket}
   end
 end

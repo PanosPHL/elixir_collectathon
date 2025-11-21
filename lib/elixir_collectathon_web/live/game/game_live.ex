@@ -79,7 +79,13 @@ defmodule ElixirCollectathonWeb.GameLive do
         {
           :ok,
           socket
-          |> assign(game_id: game_id, players: %{}, letters: ~w"E L I X I R")
+          |> assign(
+            game_id: game_id,
+            players: %{},
+            letters: ~w"E L I X I R",
+            countdown: nil,
+            game_started: false
+          )
         }
     end
   end
@@ -104,10 +110,12 @@ defmodule ElixirCollectathonWeb.GameLive do
   @doc """
   Handles game state updates received from PubSub.
 
-  Pushes the game state to the client via a JavaScript event for rendering.
+  - {:state, %Game{}} handles updating the player list and pushing the game state to the client for JavaScript events.
+  - {:countdown, n} updates the countdown timer in the socket assigns.
+  - :game_started sets the game_started flag to true in the socket assigns.
   """
 
-  @spec handle_info({atom(), Game.t()}, Phoenix.LiveView.Socket.t()) ::
+  @spec handle_info({:state, Game.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:state, %Game{} = state}, socket) do
     {
@@ -116,5 +124,37 @@ defmodule ElixirCollectathonWeb.GameLive do
       |> assign(players: state.players)
       |> push_event("game_update", state)
     }
+  end
+
+  @spec handle_info({:countdown, pos_integer() | String.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:countdown, n}, socket) do
+    {
+      :noreply,
+      socket
+      |> assign(countdown: n)
+    }
+  end
+
+  @spec handle_info(:game_started, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info(:game_started, socket) do
+    {
+      :noreply,
+      socket
+      |> assign(game_started: true)
+    }
+  end
+
+  @doc """
+  Handles the "start_countdown" event triggered by the user to start the game countdown.
+  """
+
+  @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_event("start_countdown", _, socket) do
+    GameServer.start_countdown(socket.assigns.game_id)
+
+    {:noreply, socket}
   end
 end

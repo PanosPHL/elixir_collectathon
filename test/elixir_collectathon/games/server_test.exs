@@ -62,16 +62,30 @@ defmodule ElixirCollectathon.Games.ServerTest do
     end
 
     test "frees up the player number", %{game_id: game_id} do
-      Server.join(game_id, "Alice") # Player 1
-      Server.join(game_id, "Bob")   # Player 2
+      # Player 1
+      Server.join(game_id, "Alice")
+      # Player 2
+      Server.join(game_id, "Bob")
       Server.leave(game_id, "Alice")
 
       Process.sleep(50)
 
-      Server.join(game_id, "Charlie") # Should be Player 1
+      # Should be Player 1
+      Server.join(game_id, "Charlie")
 
       state = :sys.get_state(Server.via_tuple(game_id))
       assert state.players["Charlie"].player_num == 1
+    end
+  end
+
+  describe "start_countdown/1" do
+    test "begins the countdown and starts the game once expired", %{game_id: game_id} do
+      Phoenix.PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
+
+      Server.start_countdown(game_id)
+
+      assert_receive {:countdown, "GO!"}, 5000
+      assert_receive :game_started, 5000
     end
   end
 
@@ -114,6 +128,9 @@ defmodule ElixirCollectathon.Games.ServerTest do
 
   describe "game tick updates" do
     test "increments tick_count on each tick", %{game_id: game_id} do
+      Server.join(game_id, "Alice")
+      Server.start_game(game_id)
+
       initial_state = :sys.get_state(Server.via_tuple(game_id))
       initial_tick = initial_state.tick_count
 
@@ -126,6 +143,7 @@ defmodule ElixirCollectathon.Games.ServerTest do
 
     test "updates player position based on velocity", %{game_id: game_id} do
       Server.join(game_id, "Alice")
+      Server.start_game(game_id)
       Server.update_velocity(game_id, "Alice", {1.0, 0.0})
 
       Process.sleep(50)
@@ -163,13 +181,16 @@ defmodule ElixirCollectathon.Games.ServerTest do
     end
 
     test "broadcasts state updates via PubSub", %{game_id: game_id} do
+      Server.join(game_id, "Alice")
+      Server.start_game(game_id)
+
       Phoenix.PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
 
-      Server.join(game_id, "Alice")
+      Server.update_velocity(game_id, "Alice", {1.0, 0.0})
 
       # Wait for a tick to broadcast
       assert_receive {:state, %Game{} = state}, 100
-      assert Map.has_key?(state.players, "Alice")
+      assert Map.get(state.players, "Alice").velocity == {1.0, 0.0}
     end
   end
 

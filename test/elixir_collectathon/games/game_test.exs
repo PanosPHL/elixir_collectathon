@@ -11,9 +11,10 @@ defmodule ElixirCollectathon.Games.GameTest do
 
       assert game.game_id == game_id
       assert game.tick_count == 0
-      assert game.is_running == true
+      assert game.is_running == false
       assert game.players == %{}
       assert game.next_player_num == 1
+      assert game.countdown == 3
     end
   end
 
@@ -61,6 +62,25 @@ defmodule ElixirCollectathon.Games.GameTest do
     end
   end
 
+  describe "remove_player/2" do
+    test "removes a player from the game" do
+      game = Game.new("TEST123")
+      player1 = Player.new("Alice", 1)
+      player2 = Player.new("Bob", 2)
+
+      game =
+        game
+        |> Game.add_player(player1)
+        |> Game.add_player(player2)
+
+      updated_game = Game.remove_player(game, "Alice")
+
+      refute Map.has_key?(updated_game.players, "Alice")
+      assert Map.has_key?(updated_game.players, "Bob")
+      assert updated_game.next_player_num == 1
+    end
+  end
+
   describe "get_map_size/0" do
     test "returns the map size tuple" do
       assert Game.get_map_size() == {1024, 576}
@@ -81,6 +101,43 @@ defmodule ElixirCollectathon.Games.GameTest do
       assert updated_game.players == new_players
       assert map_size(updated_game.players) == 2
       refute Map.has_key?(updated_game.players, "Alice")
+    end
+  end
+
+  describe "has_player?/2" do
+    test "returns true if the player exists in the game" do
+      game = Game.new("TEST123")
+      player = Player.new("Alice", 1)
+      game = Game.add_player(game, player)
+
+      assert Game.has_player?(game, "Alice") == true
+      assert Game.has_player?(game, "Bob") == false
+    end
+  end
+
+  describe "countdown_to_start/1" do
+    test "decrements the countdown value" do
+      game = Game.new("TEST123")
+      assert game.countdown == 3
+
+      game = Game.countdown_to_start(game)
+      assert game.countdown == 2
+
+      game = Game.countdown_to_start(game)
+      assert game.countdown == 1
+
+      game = Game.countdown_to_start(game)
+      assert game.countdown == "GO!"
+    end
+  end
+
+  describe "start/1" do
+    test "sets the game as running" do
+      game = Game.new("TEST123")
+      assert game.is_running == false
+
+      game = Game.start(game)
+      assert game.is_running == true
     end
   end
 end

@@ -15,6 +15,7 @@ defmodule ElixirCollectathon.Games.Server do
   alias Phoenix.PubSub
   alias ElixirCollectathon.Games.Game
   alias ElixirCollectathon.Players.Player
+  alias __MODULE__, as: GameServer
   use GenServer
 
   # 30 Hz
@@ -107,6 +108,44 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @doc """
+  Begins the countdown to start a game.
+
+  ## Parameters
+  - `game_id` - The ID of the game to begin the countdown on
+
+  ## Returns
+  - `:ok` - The request to begin the countdown was sent successfully
+
+  ## Examples
+
+    Server.start_countdown("ABC123")
+    # => :ok
+  """
+
+  @spec start_countdown(String.t()) :: :ok
+  def start_countdown(game_id) do
+    GenServer.cast(via_tuple(game_id), :start_countdown)
+  end
+
+  @doc """
+  Starts the game instance, usually after the countdown has completed.
+
+  ## Parameters
+    - `game_id` - The ID of the game to start
+
+  ## Returns
+    - `:ok` - The request to start the game was sent successfully
+
+  ## Examples
+
+      Server.start_game("ABC123")
+      # => :ok
+  """
+  def start_game(game_id) do
+    GenServer.cast(via_tuple(game_id), :start_game)
+  end
+
+  @doc """
   Updates the velocity of a player in the game.
 
   The velocity is a tuple of {x, y} values, typically in the range [-1, 1],
@@ -154,7 +193,6 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec init(String.t()) :: {:ok, Game.t()}
   def init(game_id) do
-    :timer.send_interval(@tick_rate, :tick)
     {
       :ok,
       game_id
@@ -192,11 +230,35 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec handle_cast({:leave, String.t()}, Game.t()) :: {:noreply, Game.t()}
   def handle_cast({:leave, player_name}, %Game{} = state) do
-    {
-      :noreply,
+    new_state =
       state
       |> Game.remove_player(player_name)
-    }
+
+    broadcast(new_state)
+
+    {:noreply, new_state}
+  end
+
+  @impl GenServer
+  @spec handle_cast(:start_countdown, Game.t()) :: {:noreply, Game.t()}
+  def handle_cast(:start_countdown, %Game{} = state) do
+    Process.send_after(self(), :countdown_tick, 1000)
+
+    broadcast(state.game_id, {:countdown, state.countdown})
+
+    {:noreply, state |> Game.countdown_to_start()}
+  end
+
+  @impl GenServer
+  @spec handle_cast(:start_game, Game.t()) :: {:noreply, Game.t()}
+  def handle_cast(:start_game, %Game{} = state) do
+    :timer.send_interval(@tick_rate, :tick)
+
+    new_state = state |> Game.start()
+
+    broadcast(new_state.game_id, :game_started)
+
+    {:noreply, state |> Game.start()}
   end
 
   @impl GenServer
@@ -215,6 +277,24 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
+  @spec handle_info(:countdown_tick, Game.t()) :: {:noreply, Game.t()}
+  def handle_info(:countdown_tick, %Game{countdown: n} = state) when is_integer(n) and n > 0 do
+    broadcast(state.game_id, {:countdown, n})
+
+    Process.send_after(self(), :countdown_tick, 1000)
+
+    {:noreply, state |> Game.countdown_to_start()}
+  end
+
+  def handle_info(:countdown_tick, %Game{countdown: "GO!"} = state) do
+    broadcast(state.game_id, {:countdown, state.countdown})
+
+    :timer.apply_after(1000, fn -> GameServer.start_game(state.game_id) end)
+
+    {:noreply, state}
+  end
+
+  @impl GenServer
   @spec handle_info(:tick, Game.t()) :: {:noreply, Game.t()}
   def handle_info(:tick, %Game{} = state) do
     updated_state =
@@ -226,6 +306,14 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   # Private functions
+  defp broadcast(game_id, payload) do
+    PubSub.broadcast(
+      ElixirCollectathon.PubSub,
+      "game:#{game_id}",
+      payload
+    )
+  end
+
   @spec broadcast(Game.t()) :: :ok
   defp broadcast(%Game{} = state) do
     PubSub.broadcast(

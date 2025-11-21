@@ -1,15 +1,27 @@
 <Layouts.app flash={@flash}>
   <div class="h-full flex flex-col justify-center items-center p-2 grow">
-    <div
-      class="relative w-64 h-64 bg-neutral flex justify-center items-center rounded-[50%]"
-      id="joystick-container"
-    >
-      <div
-        class="absolute w-32 h-32 bg-primary rounded-[50%] touch-none"
-        id="joystick-handle"
-        phx-hook="Joystick"
-      >
-      </div>
-    </div>
+    <%= cond do %>
+      <% @game_is_running == true -> %>
+        <div
+          class="relative w-64 h-64 bg-neutral flex justify-center items-center rounded-[50%]"
+          id="joystick-container"
+        >
+          <div
+            class="absolute w-32 h-32 bg-primary rounded-[50%] touch-none"
+            id="joystick-handle"
+            phx-hook="Joystick"
+          >
+          </div>
+        </div>
+      <% @countdown -> %>
+        <h1 class="text-8xl font-bold text-center" id="controller-countdown">
+          {@countdown}
+        </h1>
+      <% is_nil(@countdown) and not @game_is_running -> %>
+        <div class="flex flex-col items-center gap-4" id="waiting-for-game">
+          <h1 class="text-4xl font-bold text-center">Waiting for game to start</h1>
+          <span class="loading loading-dots loading-xl"></span>
+        </div>
+    <% end %>
   </div>
 </Layouts.app>
