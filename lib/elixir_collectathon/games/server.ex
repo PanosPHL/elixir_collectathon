@@ -18,6 +18,8 @@ defmodule ElixirCollectathon.Games.Server do
   alias __MODULE__, as: GameServer
   use GenServer
 
+  defguard has_four_players?(players) when map_size(players) >= 4
+
   # 30 Hz
   @tick_rate 33
   @box_lw 40
@@ -202,28 +204,32 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) ::
+          {:reply, {:error, :max_players_reached}, Game.t()}
+  def handle_call({:join, _player_name}, _from, %Game{} = state)
+      when has_four_players?(state.players) do
+    {:reply, {:error, :max_players_reached}, state}
+  end
+
+  @impl GenServer
+  @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) ::
           {:reply, :ok | {:error, :max_players_reached} | {:error, :already_added}, Game.t()}
   def handle_call({:join, player_name}, _from, %Game{} = state) do
-    if has_four_players?(state.players) do
-      {:reply, {:error, :max_players_reached}, state}
-    else
-      case Game.has_player?(state, player_name) do
-        false ->
-          new_state =
-            state
-            |> Game.add_player(Player.new(player_name, state.next_player_num))
+    case Game.has_player?(state, player_name) do
+      false ->
+        new_state =
+          state
+          |> Game.add_player(Player.new(player_name, state.next_player_num))
 
-          broadcast(new_state)
+        broadcast(new_state)
 
-          {
-            :reply,
-            :ok,
-            new_state
-          }
+        {
+          :reply,
+          :ok,
+          new_state
+        }
 
-        true ->
-          {:reply, {:error, :already_added}, state}
-      end
+      true ->
+        {:reply, {:error, :already_added}, state}
     end
   end
 
@@ -352,7 +358,4 @@ defmodule ElixirCollectathon.Games.Server do
 
   @spec clamp(non_neg_integer(), 0, non_neg_integer()) :: non_neg_integer()
   defp clamp(v, min, max), do: max(min(v, max), min)
-
-  @spec has_four_players?(%{optional(String.t()) => Player.t()}) :: boolean()
-  defp has_four_players?(players), do: length(Map.to_list(players)) == 4
 end
