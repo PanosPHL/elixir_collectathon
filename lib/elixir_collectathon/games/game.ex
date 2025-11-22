@@ -325,22 +325,6 @@ defmodule ElixirCollectathon.Games.Game do
     game
   end
 
-  @spec check_player_collisions(Game.t()) :: Game.t()
-  defp check_player_collisions(%Game{} = game) do
-    player_list = Map.values(game.players)
-
-    for i <- 0..(length(player_list) - 2) do
-      for j <- (i + 1)..(length(player_list) - 1) do
-        player_a = Enum.at(player_list, i)
-        player_b = Enum.at(player_list, j)
-
-        if player_collides_with_player?(player_a.position, player_b.position) do
-          #
-        end
-      end
-    end
-  end
-
   @spec increment_tick_count(Game.t()) :: Game.t()
   defp increment_tick_count(%Game{tick_count: tick_count} = game) do
     %Game{game | tick_count: tick_count + 1}
@@ -368,16 +352,6 @@ defmodule ElixirCollectathon.Games.Game do
       Map.put(game.players, player.name, updated_player)
 
     %Game{game | players: updated_players, current_letter: nil}
-  end
-
-  @spec player_collides_with_player?(
-          {non_neg_integer(), non_neg_integer()},
-          {non_neg_integer(), non_neg_integer()}
-        ) :: boolean()
-  defp player_collides_with_player?({ax, ay}, {bx, by}) do
-    player_size = Player.get_player_size()
-
-    collides?({ax, ay, player_size}, {bx, by, player_size})
   end
 
   @spec collides?(
