@@ -8,17 +8,24 @@
               {@countdown}
             </h1>
           <% else %>
-          <div class="flex flex-col items-center" id="game-qr-code">
-            <.async_result :let={qr_code} assign={@qr_code}>
-              <:loading><span class="loading loading-bars loading-xl scale-300"></span></:loading>
-              <:failed :let={_failure}>
-                <h1>{@game_id}</h1>
-              </:failed>
-              <div class="scale-75">{raw(elem(qr_code, 1))}</div>
-              <.button size="xl" variant="primary" phx-click="start_countdown">
-                Start Game
-              </.button>
-            </.async_result>
+            <div class="flex flex-col items-center" id="game-qr-code">
+              <.async_result :let={qr_code} assign={@qr_code}>
+                <:loading>
+                  <span class="loading loading-bars loading-xl scale-300"></span>
+                </:loading>
+                <:failed :let={_failure}>
+                  <h1>{@game_id}</h1>
+                </:failed>
+                <div class="scale-75">{raw(elem(qr_code, 1))}</div>
+                <.button
+                  id="start-countdown-button"
+                  size="xl"
+                  variant="primary"
+                  phx-click="start_countdown"
+                >
+                  Start Game
+                </.button>
+              </.async_result>
             </div>
           <% end %>
         </div>
