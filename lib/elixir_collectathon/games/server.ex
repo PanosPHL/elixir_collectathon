@@ -161,7 +161,7 @@ defmodule ElixirCollectathon.Games.Server do
       # => :ok (moves right)
   """
 
-  @spec update_velocity(String.t(), String.t(), {integer(), integer()}) :: :ok
+  @spec update_velocity(String.t(), String.t(), {float(), float()}) :: :ok
   def update_velocity(game_id, player_name, {x, y}) do
     GenServer.cast(via_tuple(game_id), {:velocity, player_name, {x, y}})
   end
@@ -268,14 +268,10 @@ defmodule ElixirCollectathon.Games.Server do
   @spec handle_cast({:velocity, String.t(), {integer(), integer()}}, Game.t()) ::
           {:noreply, Game.t()}
   def handle_cast({:velocity, player_name, {x, y}}, %Game{} = state) do
-    players =
-      state.players
-      |> Map.replace(player_name, Player.set_velocity(state.players[player_name], {x, y}))
-
     {
       :noreply,
       state
-      |> Game.set_players(players)
+      |> Game.update_player_velocity(player_name, {x, y})
     }
   end
 

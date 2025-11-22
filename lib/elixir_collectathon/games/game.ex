@@ -229,6 +229,45 @@ defmodule ElixirCollectathon.Games.Game do
     %Game{game | is_running: true}
   end
 
+  @doc """
+  Updates the velocity of a player.
+
+  ## Parameters
+  - `game` - The game struct to update
+  - `player_name` - The name of the player to update
+  - `velocity` - A tuple {x, y} representing the velocity vector
+
+  ## Examples
+
+      iex> game = ElixirCollectathon.Games.Game.new("Alice", 1)
+      iex> updated = ElixirCollectathon.Games.Game.update_player_velocity(game, "Alice", {1, 0})
+      iex> updated.velocity
+      {1, 0}
+  """
+
+  @spec update_player_velocity(Game.t(), String.t(), {float(), float()}) :: Game.t()
+  def update_player_velocity(%Game{} = game, player_name, velocity) do
+    players = Map.update!(game.players, player_name, &Player.set_velocity(&1, velocity))
+
+    %Game{game | players: players}
+  end
+
+  @doc """
+  Updates the game state by:
+  - Updating player positions based on their velocities
+  - Checking for letter collisions and awarding letters to players
+  - Incrementing the tick count
+  ## Parameters
+  - `game` - The game struct to update
+  ## Examples
+
+  iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+  iex> updated_game = ElixirCollectathon.Games.Game.update_game_state(game)
+  iex> updated_game.tick_count
+  1
+  """
+
+  @spec update_game_state(Game.t()) :: Game.t()
   def update_game_state(%Game{} = game) do
     game
     |> update_player_positions()
@@ -236,14 +275,38 @@ defmodule ElixirCollectathon.Games.Game do
     |> increment_tick_count()
   end
 
-  def spawn_letter(%Game{} = game) do
-    letter =
-      Letters.get_random_letter()
-      |> Letter.new(generate_valid_letter_position(game))
+  @spec update_player_positions(Game.t()) :: Game.t()
+  defp update_player_positions(%Game{} = game) do
+    updated_players =
+      Map.new(game.players, fn {player_name, player} ->
+        {player_name, update_player_position(player)}
+      end)
 
-    %Game{game | current_letter: letter}
+    %Game{game | players: updated_players}
   end
 
+  @spec update_player_position(Player.t()) :: Player.t()
+  defp update_player_position(
+         %Player{position: player_position, velocity: player_velocity} = player
+       ) do
+    {x, y} = player_position
+    {vx, vy} = player_velocity
+
+    map_size = Game.get_map_size()
+
+    # Calculate new player position and clamp to map boundaries
+    new_position = {
+      clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - @box_lw),
+      clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - @box_lw)
+    }
+
+    Player.set_position(player, new_position)
+  end
+
+  # Checks if a player collides with a letter and adds it to their inventory
+  # Preferentially treats players who joined the game first
+  # TO DO: Refactor to treat players on frame they adjusted their velocity
+  @spec check_letter_collisions(Game.t()) :: Game.t()
   defp check_letter_collisions(%Game{} = game) when is_map(game.current_letter) do
     letter = game.current_letter
 
@@ -262,6 +325,7 @@ defmodule ElixirCollectathon.Games.Game do
     game
   end
 
+  @spec check_player_collisions(Game.t()) :: Game.t()
   defp check_player_collisions(%Game{} = game) do
     player_list = Map.values(game.players)
 
@@ -277,6 +341,24 @@ defmodule ElixirCollectathon.Games.Game do
     end
   end
 
+  @spec increment_tick_count(Game.t()) :: Game.t()
+  defp increment_tick_count(%Game{tick_count: tick_count} = game) do
+    %Game{game | tick_count: tick_count + 1}
+  end
+
+  # Checks if a player collides with a letter and adds it to their inventory
+  @spec letter_collides_with_player?(
+          {non_neg_integer(), non_neg_integer()},
+          {non_neg_integer(), non_neg_integer()}
+        ) :: boolean()
+  defp letter_collides_with_player?({lx, ly}, {px, py}) do
+    letter_size = Letter.get_letter_size()
+    player_size = Player.get_player_size()
+
+    collides?({lx, ly, letter_size}, {px, py, player_size})
+  end
+
+  @spec award_letter_to_player(Game.t(), Player.t()) :: Game.t()
   defp award_letter_to_player(%Game{} = game, %Player{} = player) do
     # Update player's collected letters
     updated_player =
@@ -288,62 +370,64 @@ defmodule ElixirCollectathon.Games.Game do
     %Game{game | players: updated_players, current_letter: nil}
   end
 
-  defp letter_collides_with_player?({lx, ly}, {px, py}) do
-    letter_size = Letter.get_letter_size()
-    player_size = Player.get_player_size()
-
-    collides?({lx, ly, letter_size}, {px, py, player_size})
-  end
-
+  @spec player_collides_with_player?(
+          {non_neg_integer(), non_neg_integer()},
+          {non_neg_integer(), non_neg_integer()}
+        ) :: boolean()
   defp player_collides_with_player?({ax, ay}, {bx, by}) do
     player_size = Player.get_player_size()
 
     collides?({ax, ay, player_size}, {bx, by, player_size})
   end
 
-  def collides?({ax, ay, asize}, {bx, by, bsize}) do
+  @spec collides?(
+          {non_neg_integer(), non_neg_integer(), pos_integer()},
+          {non_neg_integer(), non_neg_integer(), pos_integer()}
+        ) :: boolean()
+  defp collides?({ax, ay, asize}, {bx, by, bsize}) do
     abs(ax - bx) < bsize / 2 + asize / 2 and
       abs(ay - by) < bsize / 2 + asize / 2
   end
 
-  @spec update_player_position(Player.t()) :: Player.t()
-  defp update_player_position(
-         %Player{position: player_position, velocity: player_velocity} = player
-       ) do
-    {x, y} = player_position
-    {vx, vy} = player_velocity
+  @doc """
+  Spawns a letter in a random place on the map that is not currently occupied by a player
 
-    map_size = Game.get_map_size()
+  ## Parameters
+  - `game` - The game struct to spawn a letter in
 
-    new_position = {
-      clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - @box_lw),
-      clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - @box_lw)
-    }
+  ## Examples
+    iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+    ...> |> ElixirCollectathon.Games.Game.spawn_letter()
+    iex> %ElixirCollectathon.Games.Game{current_letter: %ElixirCollectathon.Letters.Letter{} = current_letter}
+    iex> current_letter
+    %ElixirCollectathon.Letters.Letter{}
+  """
+  @spec spawn_letter(Game.t()) :: Game.t()
+  def spawn_letter(%Game{} = game) do
+    letter =
+      Letters.get_random_letter()
+      |> Letter.new(generate_valid_letter_position(game))
 
-    Player.set_position(player, new_position)
+    %Game{game | current_letter: letter}
   end
 
-  defp update_player_positions(%Game{} = game) do
-    updated_players =
-      Map.new(game.players, fn {player_name, player} ->
-        {player_name, update_player_position(player)}
-      end)
-
-    %Game{game | players: updated_players}
-  end
-
+  @spec generate_valid_letter_position(Game.t()) :: {non_neg_integer(), non_neg_integer()}
   defp generate_valid_letter_position(%Game{} = game) do
     {map_x, map_y} = get_map_size()
     letter_size = Letter.get_letter_size()
+    padding = Letter.get_padding()
 
+    # Generate letter position and clamp to map boundaries with 24px of padding
     lx =
       :rand.uniform(map_x)
-      |> clamp(letter_size, map_x - letter_size)
+      |> clamp(padding, map_x - letter_size - padding)
 
     ly =
       :rand.uniform(map_y)
-      |> clamp(letter_size, map_y - letter_size)
+      |> clamp(padding, map_y - letter_size - padding)
 
+    # If any player collides with a letter, generate another position recursively.
+    # Otherwise use the generated position.
     if(
       Enum.any?(game.players, fn {_name, player} ->
         letter_collides_with_player?({lx, ly}, player.position)
@@ -353,10 +437,6 @@ defmodule ElixirCollectathon.Games.Game do
     else
       {lx, ly}
     end
-  end
-
-  defp increment_tick_count(%Game{tick_count: tick_count} = game) do
-    %Game{game | tick_count: tick_count + 1}
   end
 
   @spec clamp(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: non_neg_integer()

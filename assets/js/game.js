@@ -7,29 +7,30 @@ export default {
 
     this.handleEvent('game_update', (newState) => {
       state = newState;
+      console.log(newState);
     });
 
     const letterSize = 48;
+
+    // Offsets to center the letter within its hitbox
+    // Magic numbers... will need to find a way to adjust dynamically...
+    const letterXOffset = 8;
+    const letterYOffset = 42;
     ctx.font = `${letterSize}px Arial`;
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (state.current_letter) {
-        ctx.fillStyle = 'white';
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 4;
-
         const {
           char,
-          position: [lX, lY],
+          position: [letterX, letterY],
         } = state.current_letter;
 
-        const letterX = lX - letterSize / 2;
-        const letterY = lY + letterSize / 2;
-
-        ctx.strokeText(char, letterX, letterY);
-        ctx.fillText(char, letterX, letterY);
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.fillText(char, letterX + letterXOffset, letterY + letterYOffset);
+        ctx.strokeText(char, letterX + letterXOffset, letterY + letterYOffset);
       }
 
       for (const id in state.players) {

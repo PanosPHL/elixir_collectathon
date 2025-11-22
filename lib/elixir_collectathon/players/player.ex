@@ -125,6 +125,21 @@ defmodule ElixirCollectathon.Players.Player do
     %Player{player | position: position}
   end
 
+  @doc """
+  Adds a collected letter to the player's inventory.
+
+  ## Parameters
+    - `player` - The player struct to update
+    - `letter` - The letter to add to the inventory
+
+  ## Examples
+
+      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> updated = ElixirCollectathon.Players.Player.add_collected_letter(player, "E")
+      iex> updated.inventory
+      ["E", nil, nil, nil, nil, nil]
+  """
+  @spec add_collected_letter(Player.t(), String.t()) :: Player.t()
   def add_collected_letter(%Player{} = player, letter) do
     updated_inventory =
       case letter do
@@ -151,6 +166,14 @@ defmodule ElixirCollectathon.Players.Player do
     %Player{player | inventory: updated_inventory}
   end
 
+  @doc """
+  Returns the size of a player.
+
+  ## Examples
+      iex> ElixirCollectathon.Players.Player.get_player_size()
+      40
+  """
+  @spec get_player_size() :: non_neg_integer()
   def get_player_size() do
     @player_lw
   end
