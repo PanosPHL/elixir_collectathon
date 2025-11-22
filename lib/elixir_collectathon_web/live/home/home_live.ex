@@ -183,7 +183,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
   @spec game_does_not_exist_res(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   defp game_does_not_exist_res(params, socket) do
-    errors = [game_id: {"No game exists with this ID", []}]
+    errors = [game_id: {"No game exists with this ID.", []}]
 
     {
       :noreply,
@@ -215,7 +215,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
   @spec player_already_exists_res(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   defp player_already_exists_res(params, socket) do
-    errors = [player_name: {"A player with this name already exists in this game", []}]
+    errors = [player_name: {"A player with this name already exists in this game.", []}]
 
     {
       :noreply,

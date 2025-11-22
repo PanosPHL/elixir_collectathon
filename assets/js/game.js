@@ -1,29 +1,48 @@
 export default {
-	mounted() {
-		const canvas = this.el;
-		const ctx = canvas.getContext('2d');
-		let state = { players: {}, current_letter: null };
-		const boxLengthWidth = 40;
+  mounted() {
+    const canvas = this.el;
+    const ctx = canvas.getContext('2d');
+    let state = { players: {}, current_letter: null };
+    const boxLengthWidth = 40;
 
-		this.handleEvent('game_update', (newState) => {
-			state = newState;
-		});
+    this.handleEvent('game_update', (newState) => {
+      state = newState;
+    });
 
-		const draw = () => {
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const letterSize = 48;
 
-			for (const id in state.players) {
-				const player = state.players[id];
-				const [playerX, playerY] = player.position;
+    // Offsets to center the letter within its hitbox
+    // Magic numbers... will need to find a way to adjust dynamically
+    const letterXOffset = 8;
+    const letterYOffset = 42;
+    ctx.font = `${letterSize}px Arial`;
 
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-				ctx.fillStyle = player.color;
-				ctx.fillRect(playerX, playerY, boxLengthWidth, boxLengthWidth);
-			}
+      if (state.current_letter) {
+        const {
+          char,
+          position: [letterX, letterY],
+        } = state.current_letter;
 
-			requestAnimationFrame(draw);
-		};
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.fillText(char, letterX + letterXOffset, letterY + letterYOffset);
+        ctx.strokeText(char, letterX + letterXOffset, letterY + letterYOffset);
+      }
 
-		draw();
-	},
+      for (const id in state.players) {
+        const player = state.players[id];
+        const [playerX, playerY] = player.position;
+
+        ctx.fillStyle = player.color;
+        ctx.fillRect(playerX, playerY, boxLengthWidth, boxLengthWidth);
+      }
+
+      requestAnimationFrame(draw);
+    };
+
+    draw();
+  },
 };

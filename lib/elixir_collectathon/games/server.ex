@@ -22,9 +22,6 @@ defmodule ElixirCollectathon.Games.Server do
 
   # 30 Hz
   @tick_rate 33
-  @box_lw 40
-  @movement_speed 15
-  @letters ~w(E L I X I R)
 
   @doc """
   Starts a new game server process linked to the current process.
@@ -164,7 +161,7 @@ defmodule ElixirCollectathon.Games.Server do
       # => :ok (moves right)
   """
 
-  @spec update_velocity(String.t(), String.t(), {integer(), integer()}) :: :ok
+  @spec update_velocity(String.t(), String.t(), {float(), float()}) :: :ok
   def update_velocity(game_id, player_name, {x, y}) do
     GenServer.cast(via_tuple(game_id), {:velocity, player_name, {x, y}})
   end
@@ -264,21 +261,17 @@ defmodule ElixirCollectathon.Games.Server do
 
     broadcast(new_state.game_id, :game_started)
 
-    {:noreply, state |> Game.start()}
+    {:noreply, new_state}
   end
 
   @impl GenServer
   @spec handle_cast({:velocity, String.t(), {integer(), integer()}}, Game.t()) ::
           {:noreply, Game.t()}
   def handle_cast({:velocity, player_name, {x, y}}, %Game{} = state) do
-    players =
-      state.players
-      |> Map.replace(player_name, Player.set_velocity(state.players[player_name], {x, y}))
-
     {
       :noreply,
       state
-      |> Game.set_players(players)
+      |> Game.update_player_velocity(player_name, {x, y})
     }
   end
 
@@ -304,11 +297,19 @@ defmodule ElixirCollectathon.Games.Server do
   @spec handle_info(:tick, Game.t()) :: {:noreply, Game.t()}
   def handle_info(:tick, %Game{} = state) do
     updated_state =
-      update_state(state)
+      Game.update_game_state(state)
 
     broadcast(updated_state)
 
-    {:noreply, updated_state}
+    if is_nil(updated_state.current_letter) do
+      {:noreply, updated_state |> Game.spawn_letter()}
+    else
+      {:noreply, updated_state}
+    end
+  end
+
+  def handle_info(:spawn_letter, %Game{} = state) do
+    {:noreply, state |> Game.spawn_letter()}
   end
 
   # Private functions
@@ -328,34 +329,4 @@ defmodule ElixirCollectathon.Games.Server do
       {:state, state}
     )
   end
-
-  @spec update_state(Game.t()) :: Game.t()
-  defp update_state(%Game{} = state) do
-    players =
-      Map.new(state.players, fn {player_name, player} ->
-        {player_name, update_player_position(player)}
-      end)
-
-    %Game{state | players: players, tick_count: state.tick_count + 1}
-  end
-
-  @spec update_player_position(Player.t()) :: Player.t()
-  defp update_player_position(
-         %Player{position: player_position, velocity: player_velocity} = player
-       ) do
-    {x, y} = player_position
-    {vx, vy} = player_velocity
-
-    map_size = Game.get_map_size()
-
-    new_position = {
-      clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - @box_lw),
-      clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - @box_lw)
-    }
-
-    Player.set_position(player, new_position)
-  end
-
-  @spec clamp(non_neg_integer(), 0, non_neg_integer()) :: non_neg_integer()
-  defp clamp(v, min, max), do: max(min(v, max), min)
 end

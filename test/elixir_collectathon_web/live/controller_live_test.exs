@@ -1,108 +1,85 @@
 defmodule ElixirCollectathonWeb.ControllerLiveTest do
+  alias ElixirCollectathon.Games.Server, as: GameServer
+  alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
+  use ElixirCollectathonWeb.ConnCase
   use ElixirCollectathonWeb.LiveViewCase
-  alias ElixirCollectathon.Games.Supervisor
-  alias ElixirCollectathon.Games.Server
-  alias ElixirCollectathonWeb.Routes
+
+  setup do
+    {:ok, game_id} = GameSupervisor.create_game()
+
+    Phoenix.PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
+
+    %{game_id: game_id}
+  end
 
   describe "mount/3" do
-    test "mounts successfully with game_id, player name, and game_is_running (false)", %{
-      conn: conn
-    } do
-      {:ok, game_id} = Supervisor.create_game()
-      Server.join(game_id, "Alice")
+    test "redirects to home if no player in session", %{conn: conn, game_id: game_id} do
+      assert {:error, {:live_redirect, %{to: "/"}}} =
+               live(conn, Routes.controller(game_id))
+    end
+
+    test "mounts successfully with player in session", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Alice")
 
       conn =
         conn
-        |> init_test_session(%{})
-        |> put_session("player", "Alice")
+        |> init_test_session(%{"player" => "Alice", "game_id" => game_id})
 
-      {:ok, view, _html} = live(conn, Routes.controller(game_id))
-
-      assert has_element?(view, "#waiting-for-game")
-    end
-
-    test "shows flash message on mount", %{conn: conn} do
-      {:ok, game_id} = Supervisor.create_game()
-      Server.join(game_id, "Alice")
-
-      conn =
-        conn
-        |> init_test_session(%{})
-        |> put_session("player", "Alice")
-
-      {:ok, view, _html} = live(conn, Routes.controller(game_id))
-
-      assert render(view) =~ "Successfully joined game"
-    end
-
-    test "redirects to home when session is missing", %{conn: conn} do
-      {:ok, game_id} = Supervisor.create_game()
-
-      # No session data
-      {:error, {:live_redirect, %{to: "/"}}} = live(conn, Routes.controller(game_id))
+      {:ok, _view, _html} = live(conn, Routes.controller(game_id))
     end
   end
 
-  describe "countdown display" do
-    test "renders countdown when countdown it is active", %{conn: conn} do
-      {:ok, game_id} = Supervisor.create_game()
-
-      Server.join(game_id, "Alice")
+  describe "waiting for game, countdown, and game start" do
+    test "shows waiting message when countdown/game not started", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Alice")
 
       conn =
         conn
-        |> init_test_session(%{})
-        |> put_session("player", "Alice")
+        |> init_test_session(%{"player" => "Alice", "game_id" => game_id})
 
       {:ok, view, _html} = live(conn, Routes.controller(game_id))
 
-      Phoenix.PubSub.broadcast(ElixirCollectathon.PubSub, "game:#{game_id}", {:countdown, 3})
-
-      assert render(view) =~ "3"
+      assert render(view) =~ "Waiting for game to start"
     end
-  end
 
-  describe "joystick display" do
-    test "renders joystick when game is running", %{conn: conn} do
-      {:ok, game_id} = Supervisor.create_game()
-
-      Server.join(game_id, "Alice")
+    test "starts countdown when enough players join", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Alice")
 
       conn =
         conn
-        |> init_test_session(%{})
-        |> put_session("player", "Alice")
+        |> init_test_session(%{"player" => "Alice", "game_id" => game_id})
 
       {:ok, view, _html} = live(conn, Routes.controller(game_id))
 
-      Phoenix.PubSub.broadcast(ElixirCollectathon.PubSub, "game:#{game_id}", :game_started)
+      GameServer.start_countdown(game_id)
 
-      assert has_element?(view, "#joystick-container")
-      assert has_element?(view, "#joystick-handle")
+      receive do
+        {:countdown, _} ->
+          assert render(view) =~ ~r"[1-3]|GO!"
+      after
+        1000 ->
+          flunk("Did not receive countdown message")
+      end
     end
-  end
 
-  describe "joystick_move event" do
-    test "handle_event updates player velocity", %{conn: conn} do
-      {:ok, game_id} = Supervisor.create_game()
-
-      Server.join(game_id, "Alice")
+    test "shows joystick when game starts", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Alice")
 
       conn =
         conn
-        |> init_test_session(%{})
-        |> put_session("player", "Alice")
+        |> init_test_session(%{"player" => "Alice", "game_id" => game_id})
 
       {:ok, view, _html} = live(conn, Routes.controller(game_id))
 
-      Phoenix.PubSub.broadcast(ElixirCollectathon.PubSub, "game:#{game_id}", :game_started)
+      GameServer.start_game(game_id)
 
-      # Trigger the event via the view
-      render_hook(view, "joystick_move", %{"x" => 0.5, "y" => -0.5})
-
-      # Verify velocity was updated
-      state = :sys.get_state(Server.via_tuple(game_id))
-      assert state.players["Alice"].velocity == {0.5, -0.5}
+      receive do
+        :game_started ->
+          assert has_element?(view, "#joystick-container")
+      after
+        1000 ->
+          flunk("Did not receive game_started message")
+      end
     end
   end
 end

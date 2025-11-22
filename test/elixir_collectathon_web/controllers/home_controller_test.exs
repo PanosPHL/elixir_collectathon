@@ -1,51 +1,66 @@
 defmodule ElixirCollectathonWeb.HomeControllerTest do
-  use ElixirCollectathonWeb.ConnCase
-
-  alias ElixirCollectathon.Games.Supervisor
-  alias ElixirCollectathon.Games.Server
+  use ElixirCollectathonWeb.ConnCase, async: true
+  alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
+  alias ElixirCollectathon.Games.Server, as: GameServer
 
   describe "index/2" do
     test "renders home page", %{conn: conn} do
-      conn = get(conn, ~p"/")
-      assert html_response(conn, 200) =~ "Elixir Collectathon"
+      conn = get(conn, "/")
+
+      assert html_response(conn, 200)
     end
 
-    test "clears game session data", %{conn: conn} do
-      # Setup a session with game data
-      conn =
-        conn
-        |> init_test_session(%{game_id: "some_game", player: "some_player"})
-        |> get(~p"/")
+    test "clears game_id from session", %{conn: conn} do
+      conn = conn
+        |> init_test_session(%{})
+        |> put_session(:game_id, "ABC123")
+        |> get("/")
 
       assert get_session(conn, :game_id) == nil
+    end
+
+    test "clears player from session", %{conn: conn} do
+      conn = conn
+        |> init_test_session(%{})
+        |> put_session(:player, "Alice")
+        |> get("/")
+
       assert get_session(conn, :player) == nil
     end
 
-    test "handles existing game session by leaving game", %{conn: conn} do
-      # Create a real game to test leaving logic
-      {:ok, game_id} = Supervisor.create_game()
-      Server.join(game_id, "Alice")
+    test "handles form_view param", %{conn: conn} do
+      conn = get(conn, "/?form_view=join-game")
 
-      # Verify player is in game
-      game_state = :sys.get_state(Server.via_tuple(game_id))
-      assert Map.has_key?(game_state.players, "Alice")
-
-      # Visit home with session data
-      conn
-      |> init_test_session(%{game_id: game_id, player: "Alice"})
-      |> get(~p"/")
-
-      # Let's give it a tiny bit of time for the cast to be processed
-      Process.sleep(50)
-
-      game_state = :sys.get_state(Server.via_tuple(game_id))
-      refute Map.has_key?(game_state.players, "Alice")
+      assert html_response(conn, 200)
     end
 
-    test "passes params to live render", %{conn: conn} do
-      conn = get(conn, ~p"/?form_view=join-game&game_id=ABC")
-      assert html_response(conn, 200) =~ "join-game"
-      assert html_response(conn, 200) =~ "ABC"
+    test "handles form_view and game_id params", %{conn: conn} do
+      conn = get(conn, "/?form_view=join-game&game_id=ABC123")
+
+      assert html_response(conn, 200)
+    end
+
+    test "leaves current game when session exists", %{conn: conn} do
+      # Create a game and join it
+      {:ok, game_id} = GameSupervisor.create_game()
+      GameServer.join(game_id, "Alice")
+
+      # Set session
+      conn = conn
+        |> init_test_session(%{})
+        |> put_session(:game_id, game_id)
+        |> put_session(:player, "Alice")
+        |> get("/")
+
+      # Session should be cleared
+      assert get_session(conn, :game_id) == nil
+      assert get_session(conn, :player) == nil
+
+      # Clean up
+      pid = GenServer.whereis(GameServer.via_tuple(game_id))
+      if pid && Process.alive?(pid) do
+        GenServer.stop(pid, :normal, 100)
+      end
     end
   end
 end

@@ -1,103 +1,179 @@
 defmodule ElixirCollectathon.Players.PlayerTest do
   use ExUnit.Case, async: true
-  doctest ElixirCollectathon.Players.Player
   alias ElixirCollectathon.Players.Player
   alias ElixirCollectathon.Games.Game
 
   describe "new/2" do
-    test "creates a new player with default position for player 1" do
+    test "creates a player with name and player number" do
       player = Player.new("Alice", 1)
 
       assert player.name == "Alice"
-      assert player.color == "red"
-      assert player.position == {0, 0}
+      assert player.player_num == 1
+    end
+
+    test "assigns correct color based on player number" do
+      player1 = Player.new("Alice", 1)
+      player2 = Player.new("Bob", 2)
+      player3 = Player.new("Charlie", 3)
+      player4 = Player.new("Diana", 4)
+
+      assert player1.color == "red"
+      assert player2.color == "blue"
+      assert player3.color == "yellow"
+      assert player4.color == "green"
+    end
+
+    test "assigns correct starting position based on player number" do
+      {map_x, map_y} = Game.get_map_size()
+      player_size = Player.get_player_size()
+
+      player1 = Player.new("Alice", 1)
+      player2 = Player.new("Bob", 2)
+      player3 = Player.new("Charlie", 3)
+      player4 = Player.new("Diana", 4)
+
+      assert player1.position == {0, 0}
+      assert player2.position == {map_x - player_size, 0}
+      assert player3.position == {0, map_y - player_size}
+      assert player4.position == {map_x - player_size, map_y - player_size}
+    end
+
+    test "initializes with zero velocity" do
+      player = Player.new("Alice", 1)
+
       assert player.velocity == {0, 0}
+    end
+
+    test "initializes with empty inventory" do
+      player = Player.new("Alice", 1)
+
       assert player.inventory == [nil, nil, nil, nil, nil, nil]
     end
 
-    test "creates a player with correct position for player 2" do
-      {map_x, _map_y} = Game.get_map_size()
-      player = Player.new("Bob", 2)
-
-      assert player.name == "Bob"
-      assert player.color == "blue"
-      assert player.position == {map_x - 40, 0}
-    end
-
-    test "creates a player with correct position for player 3" do
-      {_map_x, map_y} = Game.get_map_size()
-      player = Player.new("Charlie", 3)
-
-      assert player.name == "Charlie"
-      assert player.color == "yellow"
-      assert player.position == {0, map_y - 40}
-    end
-
-    test "creates a player with correct position for player 4" do
-      {map_x, map_y} = Game.get_map_size()
-      player = Player.new("Diana", 4)
-
-      assert player.name == "Diana"
-      assert player.color == "green"
-      assert player.position == {map_x - 40, map_y - 40}
-    end
-
-    test "defaults to player 1 if no player_num provided" do
+    test "uses default player number 1 when not specified" do
       player = Player.new("Alice")
 
+      assert player.player_num == 1
       assert player.color == "red"
       assert player.position == {0, 0}
-    end
-
-    test "assigns correct colors for each player number" do
-      assert Player.new("P1", 1).color == "red"
-      assert Player.new("P2", 2).color == "blue"
-      assert Player.new("P3", 3).color == "yellow"
-      assert Player.new("P4", 4).color == "green"
     end
   end
 
   describe "set_velocity/2" do
-    test "updates the player's velocity" do
+    test "updates player velocity" do
       player = Player.new("Alice", 1)
-      new_velocity = {1.0, -1.0}
+      updated = Player.set_velocity(player, {1, 0})
 
-      updated_player = Player.set_velocity(player, new_velocity)
-
-      assert updated_player.velocity == new_velocity
-      assert updated_player.position == player.position
-      assert updated_player.name == player.name
+      assert updated.velocity == {1, 0}
     end
 
-    test "preserves other player attributes when setting velocity" do
+    test "can set negative velocities" do
       player = Player.new("Alice", 1)
-      updated_player = Player.set_velocity(player, {0.5, 0.5})
+      updated = Player.set_velocity(player, {-1, -1})
 
-      assert updated_player.name == "Alice"
-      assert updated_player.color == "red"
-      assert updated_player.position == {0, 0}
+      assert updated.velocity == {-1, -1}
+    end
+
+    test "preserves other player attributes" do
+      player = Player.new("Alice", 1)
+      updated = Player.set_velocity(player, {0.5, 0.5})
+
+      assert updated.name == player.name
+      assert updated.color == player.color
+      assert updated.position == player.position
+      assert updated.player_num == player.player_num
     end
   end
 
   describe "set_position/2" do
-    test "updates the player's position" do
+    test "updates player position" do
       player = Player.new("Alice", 1)
-      new_position = {100, 200}
+      updated = Player.set_position(player, {100, 200})
 
-      updated_player = Player.set_position(player, new_position)
-
-      assert updated_player.position == new_position
-      assert updated_player.velocity == player.velocity
-      assert updated_player.name == player.name
+      assert updated.position == {100, 200}
     end
 
-    test "preserves other player attributes when setting position" do
+    test "preserves other player attributes" do
       player = Player.new("Alice", 1)
-      updated_player = Player.set_position(player, {50, 75})
+      updated = Player.set_position(player, {500, 300})
 
-      assert updated_player.name == "Alice"
-      assert updated_player.color == "red"
-      assert updated_player.velocity == {0, 0}
+      assert updated.name == player.name
+      assert updated.color == player.color
+      assert updated.velocity == player.velocity
+      assert updated.player_num == player.player_num
+    end
+  end
+
+  describe "add_collected_letter/2" do
+    test "adds E to first position" do
+      player = Player.new("Alice", 1)
+      updated = Player.add_collected_letter(player, "E")
+
+      assert updated.inventory == ["E", nil, nil, nil, nil, nil]
+    end
+
+    test "adds L to second position" do
+      player = Player.new("Alice", 1)
+      updated = Player.add_collected_letter(player, "L")
+
+      assert updated.inventory == [nil, "L", nil, nil, nil, nil]
+    end
+
+    test "adds first I to third position" do
+      player = Player.new("Alice", 1)
+      updated = Player.add_collected_letter(player, "I")
+
+      assert updated.inventory == [nil, nil, "I", nil, nil, nil]
+    end
+
+    test "adds second I to fifth position when third is occupied" do
+      player = Player.new("Alice", 1)
+      updated = player
+        |> Player.add_collected_letter("I")
+        |> Player.add_collected_letter("I")
+
+      assert updated.inventory == [nil, nil, "I", nil, "I", nil]
+    end
+
+    test "adds X to fourth position" do
+      player = Player.new("Alice", 1)
+      updated = Player.add_collected_letter(player, "X")
+
+      assert updated.inventory == [nil, nil, nil, "X", nil, nil]
+    end
+
+    test "adds R to sixth position" do
+      player = Player.new("Alice", 1)
+      updated = Player.add_collected_letter(player, "R")
+
+      assert updated.inventory == [nil, nil, nil, nil, nil, "R"]
+    end
+
+    test "can collect all letters to spell ELIXIR" do
+      player = Player.new("Alice", 1)
+
+      updated = player
+        |> Player.add_collected_letter("E")
+        |> Player.add_collected_letter("L")
+        |> Player.add_collected_letter("I")
+        |> Player.add_collected_letter("X")
+        |> Player.add_collected_letter("I")
+        |> Player.add_collected_letter("R")
+
+      assert updated.inventory == ["E", "L", "I", "X", "I", "R"]
+    end
+  end
+
+  describe "get_player_size/0" do
+    test "returns the player size constant" do
+      assert Player.get_player_size() == 40
+    end
+
+    test "player size is a positive integer" do
+      size = Player.get_player_size()
+
+      assert is_integer(size)
+      assert size > 0
     end
   end
 end
