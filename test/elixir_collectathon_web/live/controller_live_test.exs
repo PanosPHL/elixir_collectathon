@@ -1,0 +1,85 @@
+defmodule ElixirCollectathonWeb.ControllerLiveTest do
+  alias ElixirCollectathon.Games.Server, as: GameServer
+  alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
+  use ElixirCollectathonWeb.ConnCase
+  use ElixirCollectathonWeb.LiveViewCase
+
+  setup do
+    {:ok, game_id} = GameSupervisor.create_game()
+
+    Phoenix.PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
+
+    %{game_id: game_id}
+  end
+
+  describe "mount/3" do
+    test "redirects to home if no player in session", %{conn: conn, game_id: game_id} do
+      assert {:error, {:live_redirect, %{to: "/"}}} =
+               live(conn, Routes.controller(game_id))
+    end
+
+    test "mounts successfully with player in session", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Alice")
+
+      conn =
+        conn
+        |> init_test_session(%{"player" => "Alice", "game_id" => game_id})
+
+      {:ok, _view, _html} = live(conn, Routes.controller(game_id))
+    end
+  end
+
+  describe "waiting for game, countdown, and game start" do
+    test "shows waiting message when countdown/game not started", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Alice")
+
+      conn =
+        conn
+        |> init_test_session(%{"player" => "Alice", "game_id" => game_id})
+
+      {:ok, view, _html} = live(conn, Routes.controller(game_id))
+
+      assert render(view) =~ "Waiting for game to start"
+    end
+
+    test "starts countdown when enough players join", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Alice")
+
+      conn =
+        conn
+        |> init_test_session(%{"player" => "Alice", "game_id" => game_id})
+
+      {:ok, view, _html} = live(conn, Routes.controller(game_id))
+
+      GameServer.start_countdown(game_id)
+
+      receive do
+        {:countdown, _} ->
+          assert render(view) =~ ~r"[1-3]|GO!"
+      after
+        1000 ->
+          flunk("Did not receive countdown message")
+      end
+    end
+
+    test "shows joystick when game starts", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Alice")
+
+      conn =
+        conn
+        |> init_test_session(%{"player" => "Alice", "game_id" => game_id})
+
+      {:ok, view, _html} = live(conn, Routes.controller(game_id))
+
+      GameServer.start_game(game_id)
+
+      receive do
+        :game_started ->
+          assert has_element?(view, "#joystick-container")
+      after
+        1000 ->
+          flunk("Did not receive game_started message")
+      end
+    end
+  end
+end

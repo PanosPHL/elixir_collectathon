@@ -7,13 +7,12 @@ export default {
 
     this.handleEvent('game_update', (newState) => {
       state = newState;
-      console.log(newState);
     });
 
     const letterSize = 48;
 
     // Offsets to center the letter within its hitbox
-    // Magic numbers... will need to find a way to adjust dynamically...
+    // Magic numbers... will need to find a way to adjust dynamically
     const letterXOffset = 8;
     const letterYOffset = 42;
     ctx.font = `${letterSize}px Arial`;

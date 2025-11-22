@@ -2,7 +2,7 @@ defmodule ElixirCollectathonWeb.HomeLiveTest do
   alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
   alias ElixirCollectathon.Games.Server, as: GameServer
   alias ElixirCollectathonWeb.Routes
-  use ElixirCollectathonWeb.ConnCase, async: true
+  use ElixirCollectathonWeb.ConnCase
   use ElixirCollectathonWeb.LiveViewCase
 
   describe "mount/3" do
