@@ -12,12 +12,13 @@ defmodule ElixirCollectathon.Games.Game do
   The game map size is fixed at 1024x576 pixels.
   """
 
-  alias ElixirCollectathon.Letters
   alias ElixirCollectathon.Letters.Letter
   alias ElixirCollectathon.Players.Player
   alias ElixirCollectathon.Games.Utils
   alias ElixirCollectathon.Games.CollisionDetector
   alias ElixirCollectathon.Entities.Spawner
+  alias ElixirCollectathon.Entities.Hitbox
+  alias ElixirCollectathon.Games.MovementResolver
   alias __MODULE__
 
   @type t() :: %__MODULE__{
@@ -31,7 +32,6 @@ defmodule ElixirCollectathon.Games.Game do
         }
 
   @map_size {1024, 576}
-  @box_lw 40
   @movement_speed 15
 
   @derive Jason.Encoder
@@ -279,31 +279,51 @@ defmodule ElixirCollectathon.Games.Game do
   end
 
   @spec update_player_positions(Game.t()) :: Game.t()
-  defp update_player_positions(%Game{} = game) do
-    updated_players =
-      Map.new(game.players, fn {player_name, player} ->
-        {player_name, update_player_position(player)}
+  defp update_player_positions(%Game{players: players} = game) do
+    ordered = Enum.to_list(players)
+    player_size = Player.get_player_size()
+
+    initial_occupied =
+      Enum.map(players, fn {name, player} ->
+        {name, Hitbox.new(player.position, player_size)}
       end)
 
-    %Game{game | players: updated_players}
+    {new_players, _occ} =
+      Enum.reduce(ordered, {%{}, initial_occupied}, fn {name,
+                                                        %Player{
+                                                          position: player_position,
+                                                          velocity: player_velocity
+                                                        } = player},
+                                                       {acc, occupied} ->
+        target_position = calculate_target_position(player_position, player_velocity)
+
+        {updated_position, hitbox} =
+          MovementResolver.resolve(player, target_position, occupied, player_size)
+
+        updated_player = Player.set_position(player, updated_position)
+
+        {
+          Map.put(acc, name, updated_player),
+          [{name, hitbox} | occupied]
+        }
+      end)
+
+    set_players(game, new_players)
   end
 
-  @spec update_player_position(Player.t()) :: Player.t()
-  defp update_player_position(
-         %Player{position: player_position, velocity: player_velocity} = player
-       ) do
+  @spec calculate_target_position({non_neg_integer(), non_neg_integer()}, {}) ::
+          {non_neg_integer(), non_neg_integer()}
+  defp calculate_target_position(player_position, player_velocity) do
     {x, y} = player_position
     {vx, vy} = player_velocity
 
-    map_size = Game.get_map_size()
+    map_size = get_map_size()
+    player_size = Player.get_player_size()
 
-    # Calculate new player position and clamp to map boundaries
-    new_position = {
-      Utils.clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - @box_lw),
-      Utils.clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - @box_lw)
+    {
+      Utils.clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - player_size),
+      Utils.clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - player_size)
     }
-
-    Player.set_position(player, new_position)
   end
 
   # Checks if a player collides with a letter and adds it to their inventory

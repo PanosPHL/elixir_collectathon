@@ -17,7 +17,6 @@ defmodule ElixirCollectathon.Players.Player do
   """
   alias ElixirCollectathon.Entities.Hitbox
   alias ElixirCollectathon.Entities.Spawner
-  alias ElixirCollectathon.Games.Game
   alias __MODULE__
 
   @player_lw 40
@@ -71,8 +70,6 @@ defmodule ElixirCollectathon.Players.Player do
 
   @spec new(String.t(), pos_integer()) :: Player.t()
   def new(name, player_num \\ 1) do
-    {map_x, map_y} = Game.get_map_size()
-
     position =
       Spawner.spawn_player(player_num)
 
