@@ -15,17 +15,9 @@ defmodule ElixirCollectathon.Players.Player do
   - Player 3: bottom-left
   - Player 4: bottom-right
   """
+  alias ElixirCollectathon.Entities.Hitbox
   alias ElixirCollectathon.Games.Game
   alias __MODULE__
-
-  @type t() :: %__MODULE__{
-          color: String.t(),
-          name: String.t(),
-          position: {non_neg_integer(), non_neg_integer()},
-          velocity: {non_neg_integer(), non_neg_integer()},
-          inventory: list(String.t() | nil),
-          player_num: pos_integer()
-        }
 
   @player_lw 40
 
@@ -36,10 +28,21 @@ defmodule ElixirCollectathon.Players.Player do
     4 => "green"
   }
 
+  @type t() :: %__MODULE__{
+          color: String.t(),
+          name: String.t(),
+          position: {non_neg_integer(), non_neg_integer()},
+          hitbox: Hitbox.t(),
+          velocity: {non_neg_integer(), non_neg_integer()},
+          inventory: list(String.t() | nil),
+          player_num: pos_integer()
+        }
+
   @derive Jason.Encoder
   defstruct color: "red",
             name: "",
             position: {0, 0},
+            hitbox: Hitbox.new({0, 0}, @player_lw),
             velocity: {0, 0},
             inventory: [nil, nil, nil, nil, nil, nil],
             player_num: 1
@@ -77,10 +80,15 @@ defmodule ElixirCollectathon.Players.Player do
         4 -> {map_x - @player_lw, map_y - @player_lw}
       end
 
+    hitbox =
+      position
+      |> Hitbox.new(@player_lw)
+
     %Player{
       name: name,
       color: @player_colors[player_num],
       position: position,
+      hitbox: hitbox,
       player_num: player_num
     }
   end
@@ -122,7 +130,11 @@ defmodule ElixirCollectathon.Players.Player do
 
   @spec set_position(Player.t(), {non_neg_integer(), non_neg_integer()}) :: Player.t()
   def set_position(%Player{} = player, position) do
-    %Player{player | position: position}
+    hitbox =
+      position
+      |> Hitbox.new(@player_lw)
+
+    %Player{player | position: position, hitbox: hitbox}
   end
 
   @doc """

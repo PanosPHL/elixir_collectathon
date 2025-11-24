@@ -8,6 +8,7 @@ defmodule ElixirCollectathon.Games.Supervisor do
 
   Games are supervised and will be restarted if they crash.
   """
+  alias ElixirCollectathon.Games.Utils
   alias ElixirCollectathon.Games.Server, as: GameServer
 
   @doc """
@@ -32,7 +33,7 @@ defmodule ElixirCollectathon.Games.Supervisor do
 
   @spec create_game(non_neg_integer()) :: {:ok, String.t()} | {:error, :max_retries}
   def create_game(count \\ 0) do
-    game_id = ElixirCollectathon.Utils.generate_code()
+    game_id = Utils.generate_code()
 
     cond do
       count <= 5 ->

@@ -1,4 +1,4 @@
-defmodule ElixirCollectathon.Utils do
+defmodule ElixirCollectathon.Games.Utils do
   @moduledoc """
   Utility functions for the application.
 
@@ -13,7 +13,7 @@ defmodule ElixirCollectathon.Utils do
 
   ## Examples
 
-      iex> code = ElixirCollectathon.Utils.generate_code()
+      iex> code = ElixirCollectathon.Games.Utils.generate_code()
       iex> String.length(code)
       8
       iex> String.match?(code, ~r/^[0-9A-F]{8}$/)
@@ -23,6 +23,9 @@ defmodule ElixirCollectathon.Utils do
     :crypto.strong_rand_bytes(4)
     |> Base.encode16()
   end
+
+  @spec clamp(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: non_neg_integer()
+  def clamp(v, min, max), do: v |> max(min) |> min(max)
 end
 
 defimpl Jason.Encoder, for: Tuple do

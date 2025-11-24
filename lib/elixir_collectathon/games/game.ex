@@ -14,8 +14,11 @@ defmodule ElixirCollectathon.Games.Game do
 
   alias ElixirCollectathon.Letters
   alias ElixirCollectathon.Letters.Letter
-  alias __MODULE__
   alias ElixirCollectathon.Players.Player
+  alias ElixirCollectathon.Games.Utils
+  alias ElixirCollectathon.Games.CollisionDetector
+  alias ElixirCollectathon.Entities.Spawner
+  alias __MODULE__
 
   @type t() :: %__MODULE__{
           game_id: String.t(),
@@ -296,8 +299,8 @@ defmodule ElixirCollectathon.Games.Game do
 
     # Calculate new player position and clamp to map boundaries
     new_position = {
-      clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - @box_lw),
-      clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - @box_lw)
+      Utils.clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - @box_lw),
+      Utils.clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - @box_lw)
     }
 
     Player.set_position(player, new_position)
@@ -311,7 +314,7 @@ defmodule ElixirCollectathon.Games.Game do
     letter = game.current_letter
 
     case Enum.find(game.players, fn {_id, player} ->
-           letter_collides_with_player?(letter.position, player.position)
+           CollisionDetector.collides?(letter.hitbox, player.hitbox)
          end) do
       {_, player} ->
         award_letter_to_player(game, player)
@@ -330,18 +333,6 @@ defmodule ElixirCollectathon.Games.Game do
     %Game{game | tick_count: tick_count + 1}
   end
 
-  # Checks if a player collides with a letter and adds it to their inventory
-  @spec letter_collides_with_player?(
-          {non_neg_integer(), non_neg_integer()},
-          {non_neg_integer(), non_neg_integer()}
-        ) :: boolean()
-  defp letter_collides_with_player?({lx, ly}, {px, py}) do
-    letter_size = Letter.get_letter_size()
-    player_size = Player.get_player_size()
-
-    collides?({lx, ly, letter_size}, {px, py, player_size})
-  end
-
   @spec award_letter_to_player(Game.t(), Player.t()) :: Game.t()
   defp award_letter_to_player(%Game{} = game, %Player{} = player) do
     # Update player's collected letters
@@ -352,15 +343,6 @@ defmodule ElixirCollectathon.Games.Game do
       Map.put(game.players, player.name, updated_player)
 
     %Game{game | players: updated_players, current_letter: nil}
-  end
-
-  @spec collides?(
-          {non_neg_integer(), non_neg_integer(), pos_integer()},
-          {non_neg_integer(), non_neg_integer(), pos_integer()}
-        ) :: boolean()
-  defp collides?({ax, ay, asize}, {bx, by, bsize}) do
-    abs(ax - bx) < bsize / 2 + asize / 2 and
-      abs(ay - by) < bsize / 2 + asize / 2
   end
 
   @doc """
@@ -378,41 +360,6 @@ defmodule ElixirCollectathon.Games.Game do
   """
   @spec spawn_letter(Game.t()) :: Game.t()
   def spawn_letter(%Game{} = game) do
-    letter =
-      Letters.get_random_letter()
-      |> Letter.new(generate_valid_letter_position(game))
-
-    %Game{game | current_letter: letter}
+    %Game{game | current_letter: Spawner.spawn_letter(game.players)}
   end
-
-  @spec generate_valid_letter_position(Game.t()) :: {non_neg_integer(), non_neg_integer()}
-  defp generate_valid_letter_position(%Game{} = game) do
-    {map_x, map_y} = get_map_size()
-    letter_size = Letter.get_letter_size()
-    padding = Letter.get_padding()
-
-    # Generate letter position and clamp to map boundaries with 24px of padding
-    lx =
-      :rand.uniform(map_x)
-      |> clamp(padding, map_x - letter_size - padding)
-
-    ly =
-      :rand.uniform(map_y)
-      |> clamp(padding, map_y - letter_size - padding)
-
-    # If any player collides with a letter, generate another position recursively.
-    # Otherwise use the generated position.
-    if(
-      Enum.any?(game.players, fn {_name, player} ->
-        letter_collides_with_player?({lx, ly}, player.position)
-      end)
-    ) do
-      generate_valid_letter_position(game)
-    else
-      {lx, ly}
-    end
-  end
-
-  @spec clamp(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: non_neg_integer()
-  defp clamp(v, min, max), do: v |> max(min) |> min(max)
 end
