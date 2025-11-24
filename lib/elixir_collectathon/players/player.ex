@@ -16,6 +16,7 @@ defmodule ElixirCollectathon.Players.Player do
   - Player 4: bottom-right
   """
   alias ElixirCollectathon.Entities.Hitbox
+  alias ElixirCollectathon.Entities.Spawner
   alias ElixirCollectathon.Games.Game
   alias __MODULE__
 
@@ -73,12 +74,7 @@ defmodule ElixirCollectathon.Players.Player do
     {map_x, map_y} = Game.get_map_size()
 
     position =
-      case player_num do
-        1 -> {0, 0}
-        2 -> {map_x - @player_lw, 0}
-        3 -> {0, map_y - @player_lw}
-        4 -> {map_x - @player_lw, map_y - @player_lw}
-      end
+      Spawner.spawn_player(player_num)
 
     hitbox =
       position

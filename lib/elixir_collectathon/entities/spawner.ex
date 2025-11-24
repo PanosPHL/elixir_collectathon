@@ -43,4 +43,17 @@ defmodule ElixirCollectathon.Entities.Spawner do
       {lx, ly}
     end
   end
+
+  def spawn_player(player_num) do
+    {map_x, map_y} = Game.get_map_size()
+    player_size = Player.get_player_size()
+
+    position =
+      case player_num do
+        1 -> {0, 0}
+        2 -> {map_x - player_size, 0}
+        3 -> {0, map_y - player_size}
+        4 -> {map_x - player_size, map_y - player_size}
+      end
+  end
 end
