@@ -24,12 +24,13 @@ defmodule ElixirCollectathon.Entities.Spawner do
     false
   """
 
-  @spec spawn_letter(%{optional(String.t()) => Player.t()}) :: Letter.t()
+  @spec spawn_letter(Game.players()) :: Letter.t()
   def spawn_letter(players) do
     Letters.get_random_letter()
     |> Letter.new(generate_valid_letter_position(players))
   end
 
+  @spec generate_valid_letter_position(Game.players()) :: Game.position()
   defp generate_valid_letter_position(players) do
     {map_x, map_y} = Game.get_map_size()
     letter_size = Letter.get_letter_size()

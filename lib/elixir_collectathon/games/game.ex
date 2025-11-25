@@ -18,15 +18,17 @@ defmodule ElixirCollectathon.Games.Game do
   alias ElixirCollectathon.Games.CollisionDetector
   alias ElixirCollectathon.Entities.Spawner
   alias ElixirCollectathon.Games.MovementResolver
+  alias ElixirCollectathon.Players.InventoryManager
   alias __MODULE__
 
+  @type players() :: %{optional(String.t()) => Player.t()}
   @type position() :: {non_neg_integer(), non_neg_integer()}
 
   @type t() :: %__MODULE__{
           game_id: String.t(),
           tick_count: non_neg_integer(),
           is_running: boolean(),
-          players: %{optional(String.t()) => Player.t()},
+          players: players(),
           next_player_num: pos_integer(),
           countdown: pos_integer() | String.t(),
           current_letter: Letter.t() | nil,
@@ -179,7 +181,7 @@ defmodule ElixirCollectathon.Games.Game do
       "Alice"
   """
 
-  @spec set_players(Game.t(), %{optional(String.t()) => Player.t()}) :: Game.t()
+  @spec set_players(Game.t(), Game.players()) :: Game.t()
   def set_players(%Game{} = game, players) do
     %Game{game | players: players}
   end
@@ -340,7 +342,7 @@ defmodule ElixirCollectathon.Games.Game do
         }
       end)
 
-    set_players(game, new_players)
+    Game.set_players(game, new_players)
   end
 
   # Calculates the target position for a given player based on its current position and velocity
@@ -371,7 +373,7 @@ defmodule ElixirCollectathon.Games.Game do
            CollisionDetector.collides?(letter.hitbox, player.hitbox)
          end) do
       {_, player} ->
-        award_letter_to_player(game, player)
+        InventoryManager.handle_collected_letter(game, player)
 
       nil ->
         game
@@ -407,18 +409,6 @@ defmodule ElixirCollectathon.Games.Game do
   @spec increment_tick_count(Game.t()) :: Game.t()
   defp increment_tick_count(%Game{tick_count: tick_count} = game) do
     %Game{game | tick_count: tick_count + 1}
-  end
-
-  @spec award_letter_to_player(Game.t(), Player.t()) :: Game.t()
-  defp award_letter_to_player(%Game{} = game, %Player{} = player) do
-    # Update player's collected letters
-    updated_player =
-      Player.add_collected_letter(player, game.current_letter.char)
-
-    updated_players =
-      Map.put(game.players, player.name, updated_player)
-
-    %Game{game | players: updated_players, current_letter: nil}
   end
 
   @doc """
