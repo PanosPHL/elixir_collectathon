@@ -17,7 +17,6 @@ defmodule ElixirCollectathon.Games.Game do
   alias ElixirCollectathon.Games.Utils
   alias ElixirCollectathon.Games.CollisionDetector
   alias ElixirCollectathon.Entities.Spawner
-  alias ElixirCollectathon.Entities.Hitbox
   alias ElixirCollectathon.Games.MovementResolver
   alias __MODULE__
 
@@ -75,7 +74,7 @@ defmodule ElixirCollectathon.Games.Game do
   ## Examples
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> player = ElixirCollectathon.Entities.Spawner.spawn_player("Alice", 1)
       iex> updated_game = ElixirCollectathon.Games.Game.add_player(game, player)
       iex> Map.has_key?(updated_game.players, "Alice")
       true
@@ -91,6 +90,26 @@ defmodule ElixirCollectathon.Games.Game do
   end
 
   @doc """
+  Spawns a player with the correct position in the game.
+
+  ## Parameters
+  - `game` - The game struct the player should be spawned in
+  - `player_name` - The name of the player to spawn
+  - `player_num` - The player number (i.e. 1, 2, 3, 4) of the player to spawn
+
+  ## Examples
+    iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+    iex> updated_game = ElixirCollectathon.Games.Game.spawn_player(game, "Alice", 1)
+    iex> Map.has_key?(updated_game.players, "Alice")
+    true
+  """
+  @spec spawn_player(Game.t(), String.t(), 1 | 2 | 3 | 4) :: Game.t()
+  def spawn_player(%Game{} = game, player_name, player_num) do
+    game
+    |> add_player(Spawner.spawn_player(player_name, player_num))
+  end
+
+  @doc """
   Removes a player from the game.
 
   Removes the player from the player map and updates the next_player_num, should another
@@ -103,8 +122,8 @@ defmodule ElixirCollectathon.Games.Game do
   ## Examples
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-      iex> player1 = ElixirCollectathon.Players.Player.new("Alice", 1)
-      iex> player2 = ElixirCollectathon.Players.Player.new("Bob", 2)
+      iex> player1 = ElixirCollectathon.Entities.Spawner.spawn_player("Alice", 1)
+      iex> player2 = ElixirCollectathon.Entities.Spawner.spawn_player("Bob", 2)
       iex> updated_game = game
       ...> |> ElixirCollectathon.Games.Game.add_player(player1)
       ...> |> ElixirCollectathon.Games.Game.add_player(player2)
@@ -116,9 +135,10 @@ defmodule ElixirCollectathon.Games.Game do
   @spec remove_player(ElixirCollectathon.Games.Game.t(), String.t()) ::
           ElixirCollectathon.Games.Game.t()
   def remove_player(%Game{} = game, player_name) do
-    {%Player{} = player, updated_players} = Map.pop(game.players, player_name)
+    {%Player{player_num: removed_player_num}, updated_players} =
+      Map.pop!(game.players, player_name)
 
-    %Game{game | players: updated_players, next_player_num: player.player_num}
+    %Game{game | players: updated_players, next_player_num: removed_player_num}
   end
 
   @doc """
@@ -145,7 +165,7 @@ defmodule ElixirCollectathon.Games.Game do
   ## Examples
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-      iex> players = %{"Alice" => ElixirCollectathon.Players.Player.new("Alice", 1)}
+      iex> players = %{"Alice" => ElixirCollectathon.Entities.Spawner.spawn_player("Alice", 1)}
       iex> updated_game = ElixirCollectathon.Games.Game.set_players(game, players)
       iex> Map.has_key?(updated_game.players, "Alice")
       true
@@ -168,7 +188,7 @@ defmodule ElixirCollectathon.Games.Game do
   ## Examples
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> player = ElixirCollectathon.Entities.Spawner.spawn_player("Alice", 1)
       iex> game = ElixirCollectathon.Games.Game.add_player(game, player)
       iex> ElixirCollectathon.Games.Game.has_player?(game, "Alice")
       true
@@ -241,11 +261,12 @@ defmodule ElixirCollectathon.Games.Game do
   - `velocity` - A tuple {x, y} representing the velocity vector
 
   ## Examples
-
-      iex> game = ElixirCollectathon.Games.Game.new("Alice", 1)
-      iex> updated = ElixirCollectathon.Games.Game.update_player_velocity(game, "Alice", {1, 0})
-      iex> updated.velocity
-      {1, 0}
+  iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+  ...> |> ElixirCollectathon.Games.Game.spawn_player("Alice", 1)
+  ...> |> ElixirCollectathon.Games.Game.update_player_velocity("Alice", {1, 0})
+  iex> %ElixirCollectathon.Players.Player{velocity: velocity} = Map.get(game.players, "Alice")
+  iex> velocity
+  {1, 0}
   """
 
   @spec update_player_velocity(Game.t(), String.t(), {float(), float()}) :: Game.t()
@@ -262,6 +283,7 @@ defmodule ElixirCollectathon.Games.Game do
   - Incrementing the tick count
   ## Parameters
   - `game` - The game struct to update
+
   ## Examples
 
   iex> game = ElixirCollectathon.Games.Game.new("ABC123")
@@ -278,14 +300,17 @@ defmodule ElixirCollectathon.Games.Game do
     |> increment_tick_count()
   end
 
+  # Calculates the target position and hitbox, checks against currently occupied positions
+  # and hitbox. Collisions are done on a body-blocking or sliding behavior. X movement is preserved on Y
+  # collisions and Y movement is preserved on X collisions.
   @spec update_player_positions(Game.t()) :: Game.t()
   defp update_player_positions(%Game{players: players} = game) do
     ordered = Enum.to_list(players)
     player_size = Player.get_player_size()
 
     initial_occupied =
-      Enum.map(players, fn {name, player} ->
-        {name, Hitbox.new(player.position, player_size)}
+      Enum.map(players, fn {name, %Player{hitbox: player_hitbox}} ->
+        {name, player_hitbox}
       end)
 
     {new_players, _occ} =
@@ -311,18 +336,19 @@ defmodule ElixirCollectathon.Games.Game do
     set_players(game, new_players)
   end
 
-  @spec calculate_target_position({non_neg_integer(), non_neg_integer()}, {}) ::
+  # Calculates the target position for a given player based on its current position and velocity
+  @spec calculate_target_position({non_neg_integer(), non_neg_integer()}, {float(), float()}) ::
           {non_neg_integer(), non_neg_integer()}
   defp calculate_target_position(player_position, player_velocity) do
     {x, y} = player_position
     {vx, vy} = player_velocity
 
-    map_size = get_map_size()
+    {map_x, map_y} = @map_size
     player_size = Player.get_player_size()
 
     {
-      Utils.clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - player_size),
-      Utils.clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - player_size)
+      Utils.clamp(x + vx * @movement_speed, 0, map_x - player_size),
+      Utils.clamp(y + vy * @movement_speed, 0, map_y - player_size)
     }
   end
 
@@ -373,10 +399,9 @@ defmodule ElixirCollectathon.Games.Game do
 
   ## Examples
     iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-    ...> |> ElixirCollectathon.Games.Game.spawn_letter()
-    iex> %ElixirCollectathon.Games.Game{current_letter: %ElixirCollectathon.Letters.Letter{} = current_letter}
-    iex> current_letter
-    %ElixirCollectathon.Letters.Letter{}
+    iex> updated_game = ElixirCollectathon.Games.Game.spawn_letter(game)
+    iex> updated_game.current_letter != nil
+    true
   """
   @spec spawn_letter(Game.t()) :: Game.t()
   def spawn_letter(%Game{} = game) do

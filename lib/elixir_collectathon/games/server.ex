@@ -14,7 +14,6 @@ defmodule ElixirCollectathon.Games.Server do
   """
   alias Phoenix.PubSub
   alias ElixirCollectathon.Games.Game
-  alias ElixirCollectathon.Players.Player
   alias __MODULE__, as: GameServer
   use GenServer
 
@@ -202,20 +201,20 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) ::
           {:reply, {:error, :max_players_reached}, Game.t()}
-  def handle_call({:join, _player_name}, _from, %Game{} = state)
-      when has_four_players?(state.players) do
+  def handle_call({:join, _player_name}, _from, %Game{players: players} = state)
+      when has_four_players?(players) do
     {:reply, {:error, :max_players_reached}, state}
   end
 
   @impl GenServer
   @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) ::
           {:reply, :ok | {:error, :max_players_reached} | {:error, :already_added}, Game.t()}
-  def handle_call({:join, player_name}, _from, %Game{} = state) do
+  def handle_call({:join, player_name}, _from, %Game{next_player_num: next_player_num} = state) do
     case Game.has_player?(state, player_name) do
       false ->
         new_state =
           state
-          |> Game.add_player(Player.new(player_name, state.next_player_num))
+          |> Game.spawn_player(player_name, next_player_num)
 
         broadcast(new_state)
 

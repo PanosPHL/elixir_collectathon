@@ -5,8 +5,9 @@ defmodule ElixirCollectathon.Letters do
   Returns a random letter from the set of available letters.
 
   ## Examples
-      iex> ElixirCollectathon.Letters.get_random_letter()
-      "E"
+      iex> letter = ElixirCollectathon.Letters.get_random_letter()
+      iex> letter in ["E", "L", "I", "X", "R"]
+      true
   """
   @spec get_random_letter() :: String.t()
   def get_random_letter() do

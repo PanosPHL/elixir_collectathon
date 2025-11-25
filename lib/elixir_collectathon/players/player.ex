@@ -16,7 +16,6 @@ defmodule ElixirCollectathon.Players.Player do
   - Player 4: bottom-right
   """
   alias ElixirCollectathon.Entities.Hitbox
-  alias ElixirCollectathon.Entities.Spawner
   alias __MODULE__
 
   @player_lw 40
@@ -28,14 +27,15 @@ defmodule ElixirCollectathon.Players.Player do
     4 => "green"
   }
 
+  @type player_num() :: 1 | 2 | 3 | 4
   @type t() :: %__MODULE__{
           color: String.t(),
           name: String.t(),
           position: {non_neg_integer(), non_neg_integer()},
           hitbox: Hitbox.t(),
-          velocity: {non_neg_integer(), non_neg_integer()},
+          velocity: {float(), float()},
           inventory: list(String.t() | nil),
-          player_num: pos_integer()
+          player_num: 1 | 2 | 3 | 4
         }
 
   @derive Jason.Encoder
@@ -59,7 +59,7 @@ defmodule ElixirCollectathon.Players.Player do
 
   ## Examples
 
-      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1, {0, 0})
       iex> player.name
       "Alice"
       iex> player.color
@@ -68,20 +68,15 @@ defmodule ElixirCollectathon.Players.Player do
       {0, 0}
   """
 
-  @spec new(String.t(), pos_integer()) :: Player.t()
-  def new(name, player_num \\ 1) do
-    position =
-      Spawner.spawn_player(player_num)
-
-    hitbox =
-      position
-      |> Hitbox.new(@player_lw)
-
+  @spec new(String.t(), player_num(), {non_neg_integer(), non_neg_integer()}) :: t()
+  def new(name, player_num \\ 1, position) do
     %Player{
       name: name,
       color: @player_colors[player_num],
       position: position,
-      hitbox: hitbox,
+      hitbox:
+        position
+        |> Hitbox.new(@player_lw),
       player_num: player_num
     }
   end
@@ -95,13 +90,13 @@ defmodule ElixirCollectathon.Players.Player do
 
   ## Examples
 
-      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1, {0, 0})
       iex> updated = ElixirCollectathon.Players.Player.set_velocity(player, {1, 0})
       iex> updated.velocity
       {1, 0}
   """
 
-  @spec set_velocity(Player.t(), {integer(), integer()}) :: Player.t()
+  @spec set_velocity(t(), {integer(), integer()}) :: t()
   def set_velocity(%Player{} = player, velocity) do
     %Player{player | velocity: velocity}
   end
@@ -115,13 +110,13 @@ defmodule ElixirCollectathon.Players.Player do
 
   ## Examples
 
-      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1, {0, 0})
       iex> updated = ElixirCollectathon.Players.Player.set_position(player, {100, 200})
       iex> updated.position
       {100, 200}
   """
 
-  @spec set_position(Player.t(), {non_neg_integer(), non_neg_integer()}) :: Player.t()
+  @spec set_position(t(), {non_neg_integer(), non_neg_integer()}) :: t()
   def set_position(%Player{} = player, position) do
     hitbox =
       position
@@ -139,12 +134,12 @@ defmodule ElixirCollectathon.Players.Player do
 
   ## Examples
 
-      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1, {0, 0})
       iex> updated = ElixirCollectathon.Players.Player.add_collected_letter(player, "E")
       iex> updated.inventory
       ["E", nil, nil, nil, nil, nil]
   """
-  @spec add_collected_letter(Player.t(), String.t()) :: Player.t()
+  @spec add_collected_letter(t(), String.t()) :: t()
   def add_collected_letter(%Player{} = player, letter) do
     updated_inventory =
       case letter do

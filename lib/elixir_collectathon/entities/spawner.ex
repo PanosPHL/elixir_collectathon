@@ -1,4 +1,8 @@
 defmodule ElixirCollectathon.Entities.Spawner do
+  @moduledoc """
+  Responsible for spawning new entities (i.e. Players and Letters) into a game.
+  """
+
   alias ElixirCollectathon.Players.Player
   alias ElixirCollectathon.Letters
   alias ElixirCollectathon.Letters.Letter
@@ -6,6 +10,19 @@ defmodule ElixirCollectathon.Entities.Spawner do
   alias ElixirCollectathon.Games.Utils
   alias ElixirCollectathon.Entities.Hitbox
   alias ElixirCollectathon.Games.CollisionDetector
+
+  @doc """
+  Spawns a letter entity into a game
+
+  ## Parameters
+  - `players` - The map of players on a %Game{} struct
+
+  ## Examples
+    iex> %ElixirCollectathon.Games.Game{players: players} = ElixirCollectathon.Games.Game.new("ABC123")
+    iex> letter = ElixirCollectathon.Entities.Spawner.spawn_letter(players)
+    iex> is_nil(letter)
+    false
+  """
 
   @spec spawn_letter(%{optional(String.t()) => Player.t()}) :: Letter.t()
   def spawn_letter(players) do
@@ -44,15 +61,34 @@ defmodule ElixirCollectathon.Entities.Spawner do
     end
   end
 
-  def spawn_player(player_num) do
+  @doc """
+  Spawns a player entity into a game
+
+  ## Parameters
+  - `player_name` - The name of the player to spawn
+  - `player_num` - The number of the player (i.e. 1, 2, 3, 4) to spawn
+
+  ## Examples
+    iex> player = ElixirCollectathon.Entities.Spawner.spawn_player("Alice", 1)
+    iex> player.name
+    "Alice"
+    iex> player.position
+    {0, 0}
+  """
+
+  @spec spawn_player(String.t(), Player.player_num()) :: Player.t()
+  def spawn_player(player_name, player_num) do
     {map_x, map_y} = Game.get_map_size()
     player_size = Player.get_player_size()
 
-    case player_num do
-      1 -> {0, 0}
-      2 -> {map_x - player_size, 0}
-      3 -> {0, map_y - player_size}
-      4 -> {map_x - player_size, map_y - player_size}
-    end
+    position =
+      case player_num do
+        1 -> {0, 0}
+        2 -> {map_x - player_size, 0}
+        3 -> {0, map_y - player_size}
+        4 -> {map_x - player_size, map_y - player_size}
+      end
+
+    Player.new(player_name, player_num, position)
   end
 end

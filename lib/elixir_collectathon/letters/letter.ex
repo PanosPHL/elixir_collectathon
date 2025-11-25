@@ -36,11 +36,7 @@ defmodule ElixirCollectathon.Letters.Letter do
   """
   @spec new(String.t(), {non_neg_integer(), non_neg_integer()}) :: t()
   def new(char, position \\ {0, 0}) do
-    hitbox =
-      position
-      |> Hitbox.new(@letter_size)
-
-    %Letter{char: char, position: position, hitbox: hitbox}
+    %Letter{char: char, position: position, hitbox: position |> Hitbox.new(@letter_size)}
   end
 
   @doc """
