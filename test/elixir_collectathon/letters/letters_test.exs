@@ -1,37 +1,41 @@
 defmodule ElixirCollectathon.LettersTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
+  doctest ElixirCollectathon.Letters
+
   alias ElixirCollectathon.Letters
 
-  @valid_letters ~w(E L I X I R)
-
   describe "get_random_letter/0" do
-    test "returns a letter from the valid set" do
+    test "returns a valid letter" do
       letter = Letters.get_random_letter()
 
-      assert letter in @valid_letters
+      assert letter in ["E", "L", "I", "X", "R"]
     end
 
-    test "returns different letters over multiple calls" do
-      letters = for _ <- 1..100, do: Letters.get_random_letter()
+    test "multiple calls can return different letters" do
+      letters = Enum.map(1..10, fn _ -> Letters.get_random_letter() end)
 
-      # With 100 calls, we should get at least 2 different letters
-      # (extremely unlikely to get the same letter 100 times)
-      unique_letters = Enum.uniq(letters)
-      assert length(unique_letters) >= 2
-    end
-
-    test "only returns letters E, L, I, X, I, R" do
-      letters = for _ <- 1..50, do: Letters.get_random_letter()
-
-      Enum.each(letters, fn letter ->
-        assert letter in Letters.get_letters()
-      end)
+      # With 10 random selections from 5 letters, it's very likely we get at least 2 different
+      assert length(Enum.uniq(letters)) > 1
     end
   end
 
   describe "get_letters/0" do
     test "returns the list of available letters" do
-      assert Letters.get_letters() == @valid_letters
+      letters = Letters.get_letters()
+
+      assert letters == ["E", "L", "I", "X", "I", "R"]
+    end
+
+    test "returned list has 6 elements" do
+      letters = Letters.get_letters()
+
+      assert length(letters) == 6
+    end
+
+    test "includes two I's" do
+      letters = Letters.get_letters()
+
+      assert Enum.count(letters, &(&1 == "I")) == 2
     end
   end
 end

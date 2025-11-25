@@ -12,10 +12,15 @@ defmodule ElixirCollectathon.Games.Game do
   The game map size is fixed at 1024x576 pixels.
   """
 
-  alias ElixirCollectathon.Letters
   alias ElixirCollectathon.Letters.Letter
-  alias __MODULE__
   alias ElixirCollectathon.Players.Player
+  alias ElixirCollectathon.Games.Utils
+  alias ElixirCollectathon.Games.CollisionDetector
+  alias ElixirCollectathon.Entities.Spawner
+  alias ElixirCollectathon.Games.MovementResolver
+  alias __MODULE__
+
+  @type position() :: {non_neg_integer(), non_neg_integer()}
 
   @type t() :: %__MODULE__{
           game_id: String.t(),
@@ -28,7 +33,6 @@ defmodule ElixirCollectathon.Games.Game do
         }
 
   @map_size {1024, 576}
-  @box_lw 40
   @movement_speed 15
 
   @derive Jason.Encoder
@@ -72,7 +76,7 @@ defmodule ElixirCollectathon.Games.Game do
   ## Examples
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> player = ElixirCollectathon.Entities.Spawner.spawn_player("Alice", 1)
       iex> updated_game = ElixirCollectathon.Games.Game.add_player(game, player)
       iex> Map.has_key?(updated_game.players, "Alice")
       true
@@ -88,6 +92,26 @@ defmodule ElixirCollectathon.Games.Game do
   end
 
   @doc """
+  Spawns a player with the correct position in the game.
+
+  ## Parameters
+  - `game` - The game struct the player should be spawned in
+  - `player_name` - The name of the player to spawn
+  - `player_num` - The player number (i.e. 1, 2, 3, 4) of the player to spawn
+
+  ## Examples
+    iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+    iex> updated_game = ElixirCollectathon.Games.Game.spawn_player(game, "Alice", 1)
+    iex> Map.has_key?(updated_game.players, "Alice")
+    true
+  """
+  @spec spawn_player(Game.t(), String.t(), Player.player_num()) :: Game.t()
+  def spawn_player(%Game{} = game, player_name, player_num) do
+    game
+    |> add_player(Spawner.spawn_player(player_name, player_num))
+  end
+
+  @doc """
   Removes a player from the game.
 
   Removes the player from the player map and updates the next_player_num, should another
@@ -100,8 +124,8 @@ defmodule ElixirCollectathon.Games.Game do
   ## Examples
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-      iex> player1 = ElixirCollectathon.Players.Player.new("Alice", 1)
-      iex> player2 = ElixirCollectathon.Players.Player.new("Bob", 2)
+      iex> player1 = ElixirCollectathon.Entities.Spawner.spawn_player("Alice", 1)
+      iex> player2 = ElixirCollectathon.Entities.Spawner.spawn_player("Bob", 2)
       iex> updated_game = game
       ...> |> ElixirCollectathon.Games.Game.add_player(player1)
       ...> |> ElixirCollectathon.Games.Game.add_player(player2)
@@ -113,9 +137,10 @@ defmodule ElixirCollectathon.Games.Game do
   @spec remove_player(ElixirCollectathon.Games.Game.t(), String.t()) ::
           ElixirCollectathon.Games.Game.t()
   def remove_player(%Game{} = game, player_name) do
-    {%Player{} = player, updated_players} = Map.pop(game.players, player_name)
+    {%Player{player_num: removed_player_num}, updated_players} =
+      Map.pop!(game.players, player_name)
 
-    %Game{game | players: updated_players, next_player_num: player.player_num}
+    %Game{game | players: updated_players, next_player_num: removed_player_num}
   end
 
   @doc """
@@ -142,7 +167,7 @@ defmodule ElixirCollectathon.Games.Game do
   ## Examples
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-      iex> players = %{"Alice" => ElixirCollectathon.Players.Player.new("Alice", 1)}
+      iex> players = %{"Alice" => ElixirCollectathon.Entities.Spawner.spawn_player("Alice", 1)}
       iex> updated_game = ElixirCollectathon.Games.Game.set_players(game, players)
       iex> Map.has_key?(updated_game.players, "Alice")
       true
@@ -165,7 +190,7 @@ defmodule ElixirCollectathon.Games.Game do
   ## Examples
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-      iex> player = ElixirCollectathon.Players.Player.new("Alice", 1)
+      iex> player = ElixirCollectathon.Entities.Spawner.spawn_player("Alice", 1)
       iex> game = ElixirCollectathon.Games.Game.add_player(game, player)
       iex> ElixirCollectathon.Games.Game.has_player?(game, "Alice")
       true
@@ -238,14 +263,15 @@ defmodule ElixirCollectathon.Games.Game do
   - `velocity` - A tuple {x, y} representing the velocity vector
 
   ## Examples
-
-      iex> game = ElixirCollectathon.Games.Game.new("Alice", 1)
-      iex> updated = ElixirCollectathon.Games.Game.update_player_velocity(game, "Alice", {1, 0})
-      iex> updated.velocity
-      {1, 0}
+  iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+  ...> |> ElixirCollectathon.Games.Game.spawn_player("Alice", 1)
+  ...> |> ElixirCollectathon.Games.Game.update_player_velocity("Alice", {1, 0})
+  iex> %ElixirCollectathon.Players.Player{velocity: velocity} = Map.get(game.players, "Alice")
+  iex> velocity
+  {1, 0}
   """
 
-  @spec update_player_velocity(Game.t(), String.t(), {float(), float()}) :: Game.t()
+  @spec update_player_velocity(Game.t(), String.t(), Player.velocity()) :: Game.t()
   def update_player_velocity(%Game{} = game, player_name, velocity) do
     players = Map.update!(game.players, player_name, &Player.set_velocity(&1, velocity))
 
@@ -259,6 +285,7 @@ defmodule ElixirCollectathon.Games.Game do
   - Incrementing the tick count
   ## Parameters
   - `game` - The game struct to update
+
   ## Examples
 
   iex> game = ElixirCollectathon.Games.Game.new("ABC123")
@@ -275,32 +302,58 @@ defmodule ElixirCollectathon.Games.Game do
     |> increment_tick_count()
   end
 
+  # Calculates the target position and hitbox, checks against currently occupied positions
+  # and hitbox. Collisions are done on a body-blocking or sliding behavior. X movement is preserved on Y
+  # collisions and Y movement is preserved on X collisions.
   @spec update_player_positions(Game.t()) :: Game.t()
-  defp update_player_positions(%Game{} = game) do
-    updated_players =
-      Map.new(game.players, fn {player_name, player} ->
-        {player_name, update_player_position(player)}
+  defp update_player_positions(%Game{players: players} = game) do
+    ordered = Enum.to_list(players)
+    player_size = Player.get_player_size()
+
+    initial_occupied =
+      Enum.map(players, fn {name, %Player{hitbox: player_hitbox}} ->
+        {name, player_hitbox}
       end)
 
-    %Game{game | players: updated_players}
+    {new_players, _occ} =
+      Enum.reduce(ordered, {%{}, initial_occupied}, fn {name,
+                                                        %Player{
+                                                          position: player_position,
+                                                          velocity: player_velocity
+                                                        } = player},
+                                                       {acc, occupied} ->
+        target_position = calculate_target_position(player_position, player_velocity)
+
+        {updated_position, hitbox} =
+          MovementResolver.resolve(player, target_position, occupied, player_size)
+
+        updated_player = Player.set_position(player, updated_position)
+
+        {
+          Map.put(acc, name, updated_player),
+          [{name, hitbox} | occupied]
+        }
+      end)
+
+    set_players(game, new_players)
   end
 
-  @spec update_player_position(Player.t()) :: Player.t()
-  defp update_player_position(
-         %Player{position: player_position, velocity: player_velocity} = player
-       ) do
+  # Calculates the target position for a given player based on its current position and velocity
+  @spec calculate_target_position(Game.position(), Player.velocity()) ::
+          Game.position()
+  defp calculate_target_position(player_position, player_velocity) do
     {x, y} = player_position
     {vx, vy} = player_velocity
 
-    map_size = Game.get_map_size()
+    {map_x, map_y} = @map_size
+    player_size = Player.get_player_size()
 
-    # Calculate new player position and clamp to map boundaries
-    new_position = {
-      clamp(x + vx * @movement_speed, 0, elem(map_size, 0) - @box_lw),
-      clamp(y + vy * @movement_speed, 0, elem(map_size, 1) - @box_lw)
+    # Calculate movement from position and velocity, and "trunc" back to integer
+    # Clamp that result to the map bounds minus the width/height of the player box
+    {
+      Utils.clamp(trunc(x + vx * @movement_speed), 0, map_x - player_size),
+      Utils.clamp(trunc(y + vy * @movement_speed), 0, map_y - player_size)
     }
-
-    Player.set_position(player, new_position)
   end
 
   # Checks if a player collides with a letter and adds it to their inventory
@@ -311,7 +364,7 @@ defmodule ElixirCollectathon.Games.Game do
     letter = game.current_letter
 
     case Enum.find(game.players, fn {_id, player} ->
-           letter_collides_with_player?(letter.position, player.position)
+           CollisionDetector.collides?(letter.hitbox, player.hitbox)
          end) do
       {_, player} ->
         award_letter_to_player(game, player)
@@ -330,18 +383,6 @@ defmodule ElixirCollectathon.Games.Game do
     %Game{game | tick_count: tick_count + 1}
   end
 
-  # Checks if a player collides with a letter and adds it to their inventory
-  @spec letter_collides_with_player?(
-          {non_neg_integer(), non_neg_integer()},
-          {non_neg_integer(), non_neg_integer()}
-        ) :: boolean()
-  defp letter_collides_with_player?({lx, ly}, {px, py}) do
-    letter_size = Letter.get_letter_size()
-    player_size = Player.get_player_size()
-
-    collides?({lx, ly, letter_size}, {px, py, player_size})
-  end
-
   @spec award_letter_to_player(Game.t(), Player.t()) :: Game.t()
   defp award_letter_to_player(%Game{} = game, %Player{} = player) do
     # Update player's collected letters
@@ -354,15 +395,6 @@ defmodule ElixirCollectathon.Games.Game do
     %Game{game | players: updated_players, current_letter: nil}
   end
 
-  @spec collides?(
-          {non_neg_integer(), non_neg_integer(), pos_integer()},
-          {non_neg_integer(), non_neg_integer(), pos_integer()}
-        ) :: boolean()
-  defp collides?({ax, ay, asize}, {bx, by, bsize}) do
-    abs(ax - bx) < bsize / 2 + asize / 2 and
-      abs(ay - by) < bsize / 2 + asize / 2
-  end
-
   @doc """
   Spawns a letter in a random place on the map that is not currently occupied by a player
 
@@ -371,48 +403,12 @@ defmodule ElixirCollectathon.Games.Game do
 
   ## Examples
     iex> game = ElixirCollectathon.Games.Game.new("ABC123")
-    ...> |> ElixirCollectathon.Games.Game.spawn_letter()
-    iex> %ElixirCollectathon.Games.Game{current_letter: %ElixirCollectathon.Letters.Letter{} = current_letter}
-    iex> current_letter
-    %ElixirCollectathon.Letters.Letter{}
+    iex> updated_game = ElixirCollectathon.Games.Game.spawn_letter(game)
+    iex> updated_game.current_letter != nil
+    true
   """
   @spec spawn_letter(Game.t()) :: Game.t()
   def spawn_letter(%Game{} = game) do
-    letter =
-      Letters.get_random_letter()
-      |> Letter.new(generate_valid_letter_position(game))
-
-    %Game{game | current_letter: letter}
+    %Game{game | current_letter: Spawner.spawn_letter(game.players)}
   end
-
-  @spec generate_valid_letter_position(Game.t()) :: {non_neg_integer(), non_neg_integer()}
-  defp generate_valid_letter_position(%Game{} = game) do
-    {map_x, map_y} = get_map_size()
-    letter_size = Letter.get_letter_size()
-    padding = Letter.get_padding()
-
-    # Generate letter position and clamp to map boundaries with 24px of padding
-    lx =
-      :rand.uniform(map_x)
-      |> clamp(padding, map_x - letter_size - padding)
-
-    ly =
-      :rand.uniform(map_y)
-      |> clamp(padding, map_y - letter_size - padding)
-
-    # If any player collides with a letter, generate another position recursively.
-    # Otherwise use the generated position.
-    if(
-      Enum.any?(game.players, fn {_name, player} ->
-        letter_collides_with_player?({lx, ly}, player.position)
-      end)
-    ) do
-      generate_valid_letter_position(game)
-    else
-      {lx, ly}
-    end
-  end
-
-  @spec clamp(non_neg_integer(), non_neg_integer(), non_neg_integer()) :: non_neg_integer()
-  defp clamp(v, min, max), do: v |> max(min) |> min(max)
 end

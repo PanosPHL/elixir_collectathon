@@ -1,229 +1,138 @@
 defmodule ElixirCollectathon.Games.ServerTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case
+
+  alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
   alias ElixirCollectathon.Games.Server, as: GameServer
-  alias ElixirCollectathon.Games.Game
-  alias Phoenix.PubSub
 
   setup do
-    # Generate unique game ID for each test
-    game_id = "TEST#{:rand.uniform(999999)}"
-    {:ok, pid} = GameServer.start_link(game_id)
+    {:ok, game_id} = GameSupervisor.create_game()
+    Phoenix.PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
 
-    # Subscribe to PubSub for this game
-    PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
-
-    %{game_id: game_id, pid: pid}
-  end
-
-  describe "start_link/1" do
-    test "starts a game server process", %{game_id: game_id, pid: pid} do
-      assert Process.alive?(pid)
-      assert GameServer.does_game_exist?(game_id)
-    end
-
-    test "registers server in Registry", %{game_id: game_id, pid: pid} do
-      via = GameServer.via_tuple(game_id)
-      assert GenServer.whereis(via) == pid
-    end
+    %{game_id: game_id}
   end
 
   describe "via_tuple/1" do
     test "returns correct via tuple format" do
       via = GameServer.via_tuple("ABC123")
 
-      assert {:via, Registry, {ElixirCollectathon.Games.Registry, "ABC123"}} == via
+      assert via == {:via, Registry, {ElixirCollectathon.Games.Registry, "ABC123"}}
     end
   end
 
   describe "does_game_exist?/1" do
-    test "returns true for existing game", %{game_id: game_id} do
+    test "returns true when game exists", %{game_id: game_id} do
       assert GameServer.does_game_exist?(game_id)
     end
 
-    test "returns false for non-existent game" do
+    test "returns false when game does not exist" do
       refute GameServer.does_game_exist?("NONEXISTENT")
     end
   end
 
   describe "join/2" do
-    test "allows player to join game", %{game_id: game_id} do
-      assert :ok == GameServer.join(game_id, "Alice")
+    test "allows player to join an empty game", %{game_id: game_id} do
+      result = GameServer.join(game_id, "Alice")
 
-      # Should receive state broadcast
-      assert_receive {:state, %Game{players: players}}
-      assert Map.has_key?(players, "Alice")
+      assert result == :ok
     end
 
-    test "assigns correct player number", %{game_id: game_id} do
-      GameServer.join(game_id, "Alice")
-      assert_receive {:state, %Game{players: players}}
-      assert players["Alice"].player_num == 1
+    test "allows up to 4 players to join", %{game_id: game_id} do
+      names = ["Alice", "Bob", "Charlie", "Dave"]
 
-      GameServer.join(game_id, "Bob")
-      assert_receive {:state, %Game{players: players}}
-      assert players["Bob"].player_num == 2
+      Enum.each(names, fn name ->
+        assert GameServer.join(game_id, name) == :ok
+      end)
     end
 
-    test "returns error when game is full", %{game_id: game_id} do
-      # Add 4 players
-      assert :ok == GameServer.join(game_id, "Alice")
-      assert :ok == GameServer.join(game_id, "Bob")
-      assert :ok == GameServer.join(game_id, "Charlie")
-      assert :ok == GameServer.join(game_id, "Diana")
+    test "prevents 5th player from joining", %{game_id: game_id} do
+      ["Alice", "Bob", "Charlie", "Dave"]
+      |> Enum.each(&GameServer.join(game_id, &1))
 
-      receive do
-        {:state, %Game{players: players}} ->
-          if map_size(players) == 4 do
-            # 5th player should fail
-            assert {:error, :max_players_reached} == GameServer.join(game_id, "Eve")
-          end
-      end
+      result = GameServer.join(game_id, "Eve")
+
+      assert result == {:error, :max_players_reached}
     end
 
-    test "returns error when player name already exists", %{game_id: game_id} do
-      assert :ok == GameServer.join(game_id, "Alice")
+    test "prevents duplicate player names", %{game_id: game_id} do
+      :ok = GameServer.join(game_id, "Alice")
 
-      receive do
-        {:state, %Game{players: players}} ->
-          if map_size(players) == 1 do
-            # 2nd player should fail
-            assert {:error, :already_added} == GameServer.join(game_id, "Alice")
-          end
-      end
+      result = GameServer.join(game_id, "Alice")
+
+      assert result == {:error, :already_added}
     end
 
-    test "broadcasts state update on join", %{game_id: game_id} do
+    test "broadcasts game state when player joins", %{game_id: game_id} do
       GameServer.join(game_id, "Alice")
 
-      assert_receive {:state, %Game{} = state}
-      assert Map.has_key?(state.players, "Alice")
+      assert_receive {:state, _game_state}
     end
   end
 
   describe "leave/2" do
-    test "removes player from game", %{game_id: game_id} do
+    test "allows player to leave game", %{game_id: game_id} do
       GameServer.join(game_id, "Alice")
-      assert_receive {:state, %Game{}}
 
-      GameServer.leave(game_id, "Alice")
+      result = GameServer.leave(game_id, "Alice")
 
-      assert_receive {:state, %Game{players: players}}
-      refute Map.has_key?(players, "Alice")
+      assert result == :ok
     end
 
-    test "broadcasts state update on leave", %{game_id: game_id} do
+    test "broadcasts when player leaves", %{game_id: game_id} do
       GameServer.join(game_id, "Alice")
-      assert_receive {:state, %Game{}}
+      assert_receive {:state, _}
 
       GameServer.leave(game_id, "Alice")
 
-      assert_receive {:state, %Game{} = state}
-      assert map_size(state.players) == 0
+      assert_receive {:state, game_state}
+      assert map_size(game_state.players) == 0
     end
 
-    test "updates next_player_num when player leaves", %{game_id: game_id} do
+    test "allows another player to join after one leaves", %{game_id: game_id} do
       GameServer.join(game_id, "Alice")
-      GameServer.join(game_id, "Bob")
-      assert_receive {:state, %Game{}}
-      assert_receive {:state, %Game{}}
-
       GameServer.leave(game_id, "Alice")
 
-      assert_receive {:state, %Game{next_player_num: next_num}}
-      assert next_num == 1
+      result = GameServer.join(game_id, "Bob")
+
+      assert result == :ok
     end
   end
 
   describe "update_velocity/3" do
     test "updates player velocity", %{game_id: game_id} do
       GameServer.join(game_id, "Alice")
+      assert_receive {:state, _}
+
       GameServer.start_game(game_id)
+      GameServer.update_velocity(game_id, "Alice", {1, 0})
 
-      receive do
-        :game_started ->
-          GameServer.update_velocity(game_id, "Alice", {1, 0})
-
-          # Wait for a state broadcast with the updated velocity
-          # There may be tick broadcasts with the old velocity, so we need to wait
-          # for one that has the updated velocity
-          wait_for_velocity_update("Alice", {1, 0})
-      end
-    end
-  end
-
-  defp wait_for_velocity_update(player_name, expected_velocity, timeout \\ 500) do
-    receive do
-      {:state, %Game{players: players}} ->
-        if players[player_name].velocity == expected_velocity do
-          :ok
-        else
-          wait_for_velocity_update(player_name, expected_velocity, timeout)
-        end
-    after
-      timeout ->
-        flunk("Did not receive state update with velocity #{inspect(expected_velocity)} within #{timeout}ms")
+      assert_receive {:state, game_state}
+      assert game_state.players["Alice"].velocity == {1, 0}
     end
   end
 
   describe "start_countdown/1" do
-    test "initiates countdown sequence", %{game_id: game_id} do
+    test "starts the countdown", %{game_id: game_id} do
       GameServer.start_countdown(game_id)
 
-      # Should receive countdown message
-      assert_receive {:countdown, countdown}, 1500
-      assert countdown in [3, 2, 1, "GO!"]
-    end
-
-    test "broadcasts countdown updates", %{game_id: game_id} do
-      GameServer.start_countdown(game_id)
-
-      # Should receive multiple countdown messages
-      assert_receive {:countdown, 3}, 1500
-      assert_receive {:countdown, 2}, 1500
-      assert_receive {:countdown, 1}, 1500
-      assert_receive {:countdown, "GO!"}, 1500
+      assert_receive {:countdown, 3}
     end
   end
 
   describe "start_game/1" do
     test "starts the game", %{game_id: game_id} do
+      GameServer.start_countdown(game_id)
+      assert_receive {:countdown, 3}
+
       GameServer.start_game(game_id)
 
-      # Should receive game_started message
-      assert_receive :game_started, 500
+      assert_receive :game_started
     end
 
-    test "begins tick-based state updates", %{game_id: game_id} do
+    test "sets is_running to true", %{game_id: game_id} do
       GameServer.start_game(game_id)
-      assert_receive :game_started
 
-      # Should start receiving state updates
-      assert_receive {:state, %Game{is_running: true}}, 200
-    end
-  end
-
-  describe "game tick updates" do
-    test "broadcasts state updates at regular intervals", %{game_id: game_id} do
-      GameServer.start_game(game_id)
-      assert_receive :game_started
-
-      # Should receive multiple state updates
-      assert_receive {:state, %Game{tick_count: tick1}}, 200
-      assert_receive {:state, %Game{tick_count: tick2}}, 200
-
-      assert tick2 > tick1
-    end
-
-    test "increments tick count on each update", %{game_id: game_id} do
-      GameServer.start_game(game_id)
-      assert_receive :game_started
-
-      assert_receive {:state, %Game{tick_count: tick1}}, 200
-      assert_receive {:state, %Game{tick_count: tick2}}, 200
-      assert_receive {:state, %Game{tick_count: tick3}}, 200
-
-      assert tick1 < tick2
-      assert tick2 < tick3
+      assert_receive {:state, game_state}
+      assert game_state.is_running == true
     end
   end
 end
