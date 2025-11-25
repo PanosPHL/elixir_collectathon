@@ -208,13 +208,33 @@ defmodule ElixirCollectathon.Games.GameTest do
     end
   end
 
-  describe "start/1" do
+  describe "start/2" do
     test "sets is_running to true" do
       game = Game.new("ABC123")
 
       updated = Game.start(game)
 
       assert updated.is_running == true
+    end
+
+    test "sets the timer_ref to nil is none is provided" do
+      game =
+        Game.new("ABC123")
+        |> Game.start()
+
+      assert game.timer_ref == nil
+    end
+
+    test "sets the timer_ref if one is provided" do
+      {:ok, timer_ref} = :timer.apply_after(1000, fn -> IO.puts("Hello world") end)
+
+      game =
+        Game.new("ABC123")
+        |> Game.start(timer_ref)
+
+      assert game.timer_ref == timer_ref
+
+      :timer.cancel(timer_ref)
     end
 
     test "does not affect other game properties" do

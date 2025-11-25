@@ -12,6 +12,8 @@ defmodule ElixirCollectathonWeb.ControllerLive do
   alias ElixirCollectathon.Games.Server, as: GameServer
   alias ElixirCollectathonWeb.Routes
   alias Phoenix.PubSub
+  alias ElixirCollectathon.Games.Game
+  alias ElixirCollectathonWeb.Components.CustomComponents
   use ElixirCollectathonWeb, :live_view
 
   @doc """
@@ -35,7 +37,8 @@ defmodule ElixirCollectathonWeb.ControllerLive do
         player_name: player_name,
         game_id: game_id,
         game_is_running: false,
-        countdown: nil
+        countdown: nil,
+        winner: nil
       )
     }
   end
@@ -74,6 +77,14 @@ defmodule ElixirCollectathonWeb.ControllerLive do
   - `:game_started`: Marks the game as started in the LiveView state.
   - Any other messages are ignored.
   """
+
+  def handle_info({:state, %Game{winner: winner}}, socket) when not is_nil(winner) do
+    {
+      :noreply,
+      socket
+      |> assign(winner: winner)
+    }
+  end
 
   @spec handle_info({:countdown, pos_integer() | String.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

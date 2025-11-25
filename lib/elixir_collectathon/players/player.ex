@@ -40,7 +40,7 @@ defmodule ElixirCollectathon.Players.Player do
           player_num: player_num()
         }
 
-  @derive Jason.Encoder
+  @derive {Jason.Encoder, except: [:hitbox, :velocity]}
   defstruct color: "red",
             name: "",
             position: {0, 0},
@@ -166,6 +166,29 @@ defmodule ElixirCollectathon.Players.Player do
       end
 
     %Player{player | inventory: updated_inventory}
+  end
+
+  @doc """
+  Returns a boolean indicating whether a given player has won the game they are playing
+
+  iex> player = ElixirCollectathon.Players.Player.new("Alice", 1, {0, 0})
+  iex> ElixirCollectathon.Players.Player.has_won?(player)
+  false
+
+  iex> player = ElixirCollectathon.Players.Player.new("Bob", 1, {0, 0})
+  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("E")
+  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("L")
+  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("I")
+  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("X")
+  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("I")
+  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("R")
+  iex> ElixirCollectathon.Players.Player.has_won?(player)
+  true
+  """
+
+  @spec has_won?(Player.t()) :: boolean()
+  def has_won?(%Player{inventory: inventory}) do
+    inventory == ~w(E L I X I R)
   end
 
   @doc """

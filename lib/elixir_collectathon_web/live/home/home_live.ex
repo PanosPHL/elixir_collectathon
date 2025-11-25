@@ -173,6 +173,9 @@ defmodule ElixirCollectathonWeb.HomeLive do
         {:error, :already_added} ->
           player_already_exists_res(params, socket)
 
+        {:error, :game_already_started} ->
+          game_already_started_res(params, socket)
+
         # Catch all error
         _ ->
           generic_error_res(socket)
@@ -216,6 +219,16 @@ defmodule ElixirCollectathonWeb.HomeLive do
           {:noreply, Phoenix.LiveView.Socket.t()}
   defp player_already_exists_res(params, socket) do
     errors = [player_name: {"A player with this name already exists in this game.", []}]
+
+    {
+      :noreply,
+      socket
+      |> assign(:join_game_form, to_form(params, errors: errors))
+    }
+  end
+
+  defp game_already_started_res(params, socket) do
+    errors = [game_id: {"This game has already started. Try joining a different game.", []}]
 
     {
       :noreply,

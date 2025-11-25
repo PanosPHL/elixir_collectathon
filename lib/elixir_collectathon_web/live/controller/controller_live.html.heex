@@ -1,7 +1,11 @@
 <Layouts.app flash={@flash}>
   <div class="h-full flex flex-col justify-center items-center p-2 grow">
     <%= cond do %>
-      <% @game_is_running == true -> %>
+      <% @winner -> %>
+        <CustomComponents.winner text_class="text-5xl">
+          {@winner} wins!!!
+        </CustomComponents.winner>
+      <% @game_is_running -> %>
         <div
           class="relative w-64 h-64 bg-neutral flex justify-center items-center rounded-[50%]"
           id="joystick-container"

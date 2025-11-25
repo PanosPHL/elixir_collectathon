@@ -20,6 +20,8 @@ export default {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      if (state.winner) return;
+
       if (state.current_letter) {
         const {
           char,

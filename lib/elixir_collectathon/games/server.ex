@@ -231,6 +231,11 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
+  def handle_call({:join, _player_name}, _from, %Game{is_running: true} = state) do
+    {:reply, {:error, :game_already_started}, state}
+  end
+
+  @impl GenServer
   @spec handle_cast({:leave, String.t()}, Game.t()) :: {:noreply, Game.t()}
   def handle_cast({:leave, player_name}, %Game{} = state) do
     new_state =
@@ -255,9 +260,9 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec handle_cast(:start_game, Game.t()) :: {:noreply, Game.t()}
   def handle_cast(:start_game, %Game{} = state) do
-    :timer.send_interval(@tick_rate, :tick)
+    {:ok, timer_ref} = :timer.send_interval(@tick_rate, :tick)
 
-    new_state = state |> Game.start()
+    new_state = state |> Game.start(timer_ref)
 
     broadcast(new_state.game_id, :game_started)
 
@@ -296,23 +301,35 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec handle_info(:tick, Game.t()) :: {:noreply, Game.t()}
   def handle_info(:tick, %Game{} = state) do
-    updated_state =
+    %Game{current_letter: current_letter, winner: winner, timer_ref: timer_ref} =
+      updated_state =
       Game.update_game_state(state)
 
     broadcast(updated_state)
 
-    if is_nil(updated_state.current_letter) do
-      {:noreply, updated_state |> Game.spawn_letter()}
-    else
-      {:noreply, updated_state}
+    cond do
+      # If there is a winner, cancel the game ticks and stop the game
+      winner ->
+        :timer.cancel(timer_ref)
+        {:noreply, updated_state |> Game.stop()}
+
+      # If the game is running and there is no current letter spawned, spawn one
+      is_nil(current_letter) ->
+        {:noreply, updated_state |> Game.spawn_letter()}
+
+      # Otherwise, just return the game state
+      true ->
+        {:noreply, updated_state}
     end
   end
 
+  @spec handle_info(:spawn_letter, Game.t()) :: {:noreply, Game.t()}
   def handle_info(:spawn_letter, %Game{} = state) do
     {:noreply, state |> Game.spawn_letter()}
   end
 
   # Private functions
+  @spec broadcast(String.t(), any()) :: :ok
   defp broadcast(game_id, payload) do
     PubSub.broadcast(
       ElixirCollectathon.PubSub,

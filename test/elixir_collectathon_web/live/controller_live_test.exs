@@ -1,6 +1,7 @@
 defmodule ElixirCollectathonWeb.ControllerLiveTest do
   alias ElixirCollectathon.Games.Server, as: GameServer
   alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
+  alias ElixirCollectathon.Games.Game
   use ElixirCollectathonWeb.ConnCase
   use ElixirCollectathonWeb.LiveViewCase
 
@@ -80,6 +81,29 @@ defmodule ElixirCollectathonWeb.ControllerLiveTest do
         1000 ->
           flunk("Did not receive game_started message")
       end
+    end
+  end
+
+  describe "when a winner is declared" do
+    test "shows a winner message to the player", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Bob")
+
+      conn =
+        conn
+        |> init_test_session(%{"player" => "Bob", "game_id" => game_id})
+
+      {:ok, view, _html} = live(conn, Routes.controller(game_id))
+
+      Phoenix.PubSub.broadcast(
+        ElixirCollectathon.PubSub,
+        "game:#{game_id}",
+        {
+          :state,
+          %Game{Game.new("ABC123") | winner: "Bob"}
+        }
+      )
+
+      assert render(view) =~ "Bob"
     end
   end
 end
