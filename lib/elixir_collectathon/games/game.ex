@@ -29,20 +29,24 @@ defmodule ElixirCollectathon.Games.Game do
           players: %{optional(String.t()) => Player.t()},
           next_player_num: pos_integer(),
           countdown: pos_integer() | String.t(),
-          current_letter: Letter.t() | nil
+          current_letter: Letter.t() | nil,
+          winner: String.t() | nil,
+          timer_ref: :timer.tref() | nil
         }
 
   @map_size {1024, 576}
   @movement_speed 15
 
-  @derive Jason.Encoder
+  @derive {Jason.Encoder, except: [:tick_count, :next_player_num, :countdown, :timer_ref]}
   defstruct game_id: "",
             tick_count: 0,
             is_running: false,
             players: %{},
             next_player_num: 1,
             countdown: 3,
-            current_letter: nil
+            current_letter: nil,
+            winner: nil,
+            timer_ref: nil
 
   @doc """
   Creates a new game instance with the given game ID.
@@ -245,13 +249,13 @@ defmodule ElixirCollectathon.Games.Game do
     true
   """
 
-  @spec start(Game.t()) :: Game.t()
-  def start(%Game{} = game) do
+  @spec start(Game.t(), :timer.tref() | nil) :: Game.t()
+  def start(%Game{} = game, timer_ref \\ nil) do
     game =
       game
       |> spawn_letter()
 
-    %Game{game | is_running: true}
+    %Game{game | is_running: true, timer_ref: timer_ref}
   end
 
   @doc """
@@ -299,6 +303,7 @@ defmodule ElixirCollectathon.Games.Game do
     game
     |> update_player_positions()
     |> check_letter_collisions()
+    |> check_winner()
     |> increment_tick_count()
   end
 
@@ -360,10 +365,9 @@ defmodule ElixirCollectathon.Games.Game do
   # Preferentially treats players who joined the game first
   # TO DO: Refactor to treat players on frame they adjusted their velocity
   @spec check_letter_collisions(Game.t()) :: Game.t()
-  defp check_letter_collisions(%Game{} = game) when is_map(game.current_letter) do
-    letter = game.current_letter
-
-    case Enum.find(game.players, fn {_id, player} ->
+  defp check_letter_collisions(%Game{current_letter: letter, players: players} = game)
+       when is_map(letter) do
+    case Enum.find(players, fn {_name, player} ->
            CollisionDetector.collides?(letter.hitbox, player.hitbox)
          end) do
       {_, player} ->
@@ -376,6 +380,28 @@ defmodule ElixirCollectathon.Games.Game do
 
   defp check_letter_collisions(%Game{} = game) do
     game
+  end
+
+  # Checks if a player has won and sets them as the
+  # winner in the game state/struct
+  @spec check_winner(Game.t()) :: Game.t()
+  defp check_winner(%Game{players: players} = game) do
+    case Enum.find(players, fn {_name, player} ->
+           Player.has_won?(player)
+         end) do
+      {name, _player} ->
+        game
+        |> declare_winner(name)
+
+      nil ->
+        game
+    end
+  end
+
+  # Sets the declared winner in the game struct
+  @spec declare_winner(Game.t(), String.t()) :: Game.t()
+  defp declare_winner(%Game{} = game, winner) when not is_nil(winner) do
+    %Game{game | winner: winner}
   end
 
   @spec increment_tick_count(Game.t()) :: Game.t()
@@ -410,5 +436,28 @@ defmodule ElixirCollectathon.Games.Game do
   @spec spawn_letter(Game.t()) :: Game.t()
   def spawn_letter(%Game{} = game) do
     %Game{game | current_letter: Spawner.spawn_letter(game.players)}
+  end
+
+  @doc """
+  Stops the game currently in place
+
+  ## Parameters
+  - `game` - The game struct to stop
+
+  ## Examples
+    iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+    ...> |> ElixirCollectathon.Games.Game.start()
+    iex> game.is_running
+    true
+    iex> game = ElixirCollectathon.Games.Game.stop(game)
+    iex> game.is_running
+    false
+    iex> game.timer_ref
+    nil
+  """
+
+  @spec stop(Game.t()) :: Game.t()
+  def stop(%Game{} = game) do
+    %Game{game | is_running: false, timer_ref: nil}
   end
 end

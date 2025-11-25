@@ -1,32 +1,42 @@
 <Layouts.app flash={@flash}>
   <div class="flex flex-col w-full gap-4 max-w-5xl">
     <div class="relative">
-      <%= if not @game_started do %>
+      <%= if not @game_started or @winner do %>
         <div class="absolute top-1/2 left-1/2 flex flex-col items-center translate-[-50%]">
-          <%= if @countdown do %>
-            <h1 class="text-8xl font-bold text-center" id="game-countdown">
-              {@countdown}
-            </h1>
-          <% else %>
-            <div class="flex flex-col items-center" id="game-qr-code">
-              <.async_result :let={qr_code} assign={@qr_code}>
-                <:loading>
-                  <span class="loading loading-bars loading-xl scale-300"></span>
-                </:loading>
-                <:failed :let={_failure}>
-                  <h1>{@game_id}</h1>
-                </:failed>
-                <div class="scale-75">{raw(elem(qr_code, 1))}</div>
-                <.button
-                  id="start-countdown-button"
-                  size="xl"
-                  variant="primary"
-                  phx-click="start_countdown"
-                >
-                  Start Game
-                </.button>
-              </.async_result>
-            </div>
+          <%= cond do %>
+            <% @winner -> %>
+              <h1
+                class="text-6xl font-bold text-center flex flex-col items-center gap-2"
+                id="game-winner"
+              >
+                The winner is... <span>{@winner}!!!</span>
+              </h1>
+            <% @countdown -> %>
+              <h1 class="text-8xl font-bold text-center" id="game-countdown">
+                {@countdown}
+              </h1>
+            <% true -> %>
+              <div class="flex flex-col items-center" id="game-qr-code">
+                <.async_result :let={qr_code} assign={@qr_code}>
+                  <:loading>
+                    <span class="loading loading-bars loading-xl scale-300"></span>
+                  </:loading>
+                  <:failed :let={_failure}>
+                    <h1 class="text-6xl font-bold text-center">{@game_id}</h1>
+                  </:failed>
+                  <div class="scale-75">{raw(elem(qr_code, 1))}</div>
+                  <h1 class="text-4xl font-bold text-center -mt-8 mb-4">{@game_id}</h1>
+                  <.button
+                    id="start-countdown-button"
+                    disabled={length(@players) < 2}
+                    size="xl"
+                    variant="primary"
+                    phx-click="start_countdown"
+                  >
+                    Start Game
+                  </.button>
+                </.async_result>
+              </div>
           <% end %>
         </div>
       <% end %>
@@ -39,7 +49,7 @@
       >
       </canvas>
     </div>
-    <div class="grid grid-cols-2">
+    <div class="grid grid-cols-2 gap-x-2 gap-y-2">
       <.player_scorecard
         :for={{name, player} <- @players}
         color={player.color}

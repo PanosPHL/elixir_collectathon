@@ -170,6 +170,28 @@ defmodule ElixirCollectathon.Players.PlayerTest do
     end
   end
 
+  describe "has_won?/1" do
+    test "returns false if a player has not collected all the letters" do
+      player =
+        ElixirCollectathon.Players.Player.new("Alice", 1, {0, 0})
+
+      assert ElixirCollectathon.Players.Player.has_won?(player) == false
+    end
+
+    test "returns true if a player has collected all the letters" do
+      player =
+        ElixirCollectathon.Players.Player.new("Bob", 1, {0, 0})
+        |> ElixirCollectathon.Players.Player.add_collected_letter("E")
+        |> ElixirCollectathon.Players.Player.add_collected_letter("L")
+        |> ElixirCollectathon.Players.Player.add_collected_letter("I")
+        |> ElixirCollectathon.Players.Player.add_collected_letter("X")
+        |> ElixirCollectathon.Players.Player.add_collected_letter("I")
+        |> ElixirCollectathon.Players.Player.add_collected_letter("R")
+
+      assert ElixirCollectathon.Players.Player.has_won?(player) == true
+    end
+  end
+
   describe "get_player_size/0" do
     test "returns 40" do
       assert Player.get_player_size() == 40

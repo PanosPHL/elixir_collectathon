@@ -19,7 +19,7 @@ defmodule ElixirCollectathon.Letters.Letter do
           hitbox: Hitbox.t()
         }
 
-  @derive Jason.Encoder
+  @derive {Jason.Encoder, except: [:hitbox]}
   defstruct char: "",
             position: {0, 0},
             hitbox: Hitbox.new({0, 0}, @letter_size)

@@ -81,10 +81,11 @@ defmodule ElixirCollectathonWeb.GameLive do
           socket
           |> assign(
             game_id: game_id,
-            players: %{},
+            players: [],
             letters: ~w"E L I X I R",
             countdown: nil,
-            game_started: false
+            game_started: false,
+            winner: nil
           )
         }
     end
@@ -97,12 +98,20 @@ defmodule ElixirCollectathonWeb.GameLive do
   """
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_params(_, uri, socket) do
+  def handle_params(%{"id" => game_id}, uri, socket) do
+    %URI{scheme: scheme, authority: authority} = URI.parse(uri)
+
     {
       :noreply,
       socket
       |> assign_async(:qr_code, fn ->
-        {:ok, %{qr_code: (uri <> "?form_view=join-game") |> QRCode.create() |> QRCode.render()}}
+        {:ok,
+         %{
+           qr_code:
+             "#{scheme}://#{authority}/?form_view=join-game&game_id=#{game_id}"
+             |> QRCode.create()
+             |> QRCode.render()
+         }}
       end)
     }
   end
@@ -117,11 +126,15 @@ defmodule ElixirCollectathonWeb.GameLive do
 
   @spec handle_info({:state, Game.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:state, %Game{} = state}, socket) do
+  def handle_info({:state, %Game{players: players, winner: winner} = state}, socket) do
+    ordered_players =
+      Enum.to_list(players)
+      |> Enum.sort_by(&elem(&1, 1).player_num)
+
     {
       :noreply,
       socket
-      |> assign(players: state.players)
+      |> assign(players: ordered_players, winner: winner)
       |> push_event("game_update", state)
     }
   end
