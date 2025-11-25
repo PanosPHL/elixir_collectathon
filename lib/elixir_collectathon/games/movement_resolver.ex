@@ -4,6 +4,7 @@ defmodule ElixirCollectathon.Games.MovementResolver do
   """
 
   alias ElixirCollectathon.Players.Player
+  alias ElixirCollectathon.Games.Game
   alias ElixirCollectathon.Entities.Hitbox
   alias ElixirCollectathon.Games.CollisionDetector
 
@@ -45,10 +46,10 @@ defmodule ElixirCollectathon.Games.MovementResolver do
 
   @spec resolve(
           Player.t(),
-          {non_neg_integer(), non_neg_integer()},
+          Game.position(),
           list({String.t(), Hitbox.t()}),
           pos_integer()
-        ) :: {{non_neg_integer(), non_neg_integer()}, Hitbox.t()}
+        ) :: {Game.position(), Hitbox.t()}
   def resolve(%Player{position: {px, py}, name: player_name}, {tx, ty}, occupied, size) do
     new_x_hitbox =
       Hitbox.new({tx, py}, size)

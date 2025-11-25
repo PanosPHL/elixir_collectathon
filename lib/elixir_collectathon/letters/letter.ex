@@ -6,6 +6,7 @@ defmodule ElixirCollectathon.Letters.Letter do
   - A character (A-Z)
   - A position on the game map as {x, y} coordinates
   """
+  alias ElixirCollectathon.Games.Game
   alias ElixirCollectathon.Entities.Hitbox
   alias __MODULE__
 
@@ -14,7 +15,7 @@ defmodule ElixirCollectathon.Letters.Letter do
 
   @type t() :: %__MODULE__{
           char: String.t(),
-          position: {non_neg_integer(), non_neg_integer()},
+          position: Game.position(),
           hitbox: Hitbox.t()
         }
 
@@ -34,7 +35,7 @@ defmodule ElixirCollectathon.Letters.Letter do
       iex> ElixirCollectathon.Letters.Letter.new("E", {0, 0})
       %ElixirCollectathon.Letters.Letter{char: "E", position: {0, 0}}
   """
-  @spec new(String.t(), {non_neg_integer(), non_neg_integer()}) :: t()
+  @spec new(String.t(), Game.position()) :: t()
   def new(char, position \\ {0, 0}) do
     %Letter{char: char, position: position, hitbox: position |> Hitbox.new(@letter_size)}
   end

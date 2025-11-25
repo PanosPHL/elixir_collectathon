@@ -1,4 +1,6 @@
 defmodule ElixirCollectathon.Entities.Hitbox do
+  alias ElixirCollectathon.Games.Game
+
   @moduledoc """
   Represents a hitbox for a given entity (i.e. Players, and Letters) in a game.
 
@@ -29,12 +31,12 @@ defmodule ElixirCollectathon.Entities.Hitbox do
     iex> ElixirCollectathon.Entities.Hitbox.new({0, 0}, 40, 50)
     {0, 0, 40, 50}
   """
-  @spec new({non_neg_integer(), non_neg_integer()}, pos_integer()) :: t()
+  @spec new(Game.position(), pos_integer()) :: t()
   def new({x, y}, side_lw) do
     {x, y, x + side_lw, y + side_lw}
   end
 
-  @spec new({non_neg_integer(), non_neg_integer()}, pos_integer(), pos_integer()) :: t()
+  @spec new(Game.position(), pos_integer(), pos_integer()) :: t()
   def new({x, y}, width, height) do
     {x, y, x + width, y + height}
   end

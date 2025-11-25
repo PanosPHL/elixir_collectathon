@@ -14,6 +14,7 @@ defmodule ElixirCollectathon.Games.Server do
   """
   alias Phoenix.PubSub
   alias ElixirCollectathon.Games.Game
+  alias ElixirCollectathon.Players.Player
   alias __MODULE__, as: GameServer
   use GenServer
 
@@ -160,7 +161,7 @@ defmodule ElixirCollectathon.Games.Server do
       # => :ok (moves right)
   """
 
-  @spec update_velocity(String.t(), String.t(), {float(), float()}) :: :ok
+  @spec update_velocity(String.t(), String.t(), Player.velocity()) :: :ok
   def update_velocity(game_id, player_name, {x, y}) do
     GenServer.cast(via_tuple(game_id), {:velocity, player_name, {x, y}})
   end

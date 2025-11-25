@@ -20,6 +20,8 @@ defmodule ElixirCollectathon.Games.Game do
   alias ElixirCollectathon.Games.MovementResolver
   alias __MODULE__
 
+  @type position() :: {non_neg_integer(), non_neg_integer()}
+
   @type t() :: %__MODULE__{
           game_id: String.t(),
           tick_count: non_neg_integer(),
@@ -103,7 +105,7 @@ defmodule ElixirCollectathon.Games.Game do
     iex> Map.has_key?(updated_game.players, "Alice")
     true
   """
-  @spec spawn_player(Game.t(), String.t(), 1 | 2 | 3 | 4) :: Game.t()
+  @spec spawn_player(Game.t(), String.t(), Player.player_num()) :: Game.t()
   def spawn_player(%Game{} = game, player_name, player_num) do
     game
     |> add_player(Spawner.spawn_player(player_name, player_num))
@@ -269,7 +271,7 @@ defmodule ElixirCollectathon.Games.Game do
   {1, 0}
   """
 
-  @spec update_player_velocity(Game.t(), String.t(), {float(), float()}) :: Game.t()
+  @spec update_player_velocity(Game.t(), String.t(), Player.velocity()) :: Game.t()
   def update_player_velocity(%Game{} = game, player_name, velocity) do
     players = Map.update!(game.players, player_name, &Player.set_velocity(&1, velocity))
 
@@ -337,8 +339,8 @@ defmodule ElixirCollectathon.Games.Game do
   end
 
   # Calculates the target position for a given player based on its current position and velocity
-  @spec calculate_target_position({non_neg_integer(), non_neg_integer()}, {float(), float()}) ::
-          {non_neg_integer(), non_neg_integer()}
+  @spec calculate_target_position(Game.position(), Player.velocity()) ::
+          Game.position()
   defp calculate_target_position(player_position, player_velocity) do
     {x, y} = player_position
     {vx, vy} = player_velocity
@@ -346,9 +348,11 @@ defmodule ElixirCollectathon.Games.Game do
     {map_x, map_y} = @map_size
     player_size = Player.get_player_size()
 
+    # Calculate movement from position and velocity, and "trunc" back to integer
+    # Clamp that result to the map bounds minus the width/height of the player box
     {
-      Utils.clamp(x + vx * @movement_speed, 0, map_x - player_size),
-      Utils.clamp(y + vy * @movement_speed, 0, map_y - player_size)
+      Utils.clamp(trunc(x + vx * @movement_speed), 0, map_x - player_size),
+      Utils.clamp(trunc(y + vy * @movement_speed), 0, map_y - player_size)
     }
   end
 
