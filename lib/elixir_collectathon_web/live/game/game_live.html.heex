@@ -5,12 +5,12 @@
         <div class="absolute top-1/2 left-1/2 flex flex-col items-center translate-[-50%]">
           <%= cond do %>
             <% @winner -> %>
-              <h1
-                class="text-6xl font-bold text-center flex flex-col items-center gap-2"
-                id="game-winner"
-              >
-                The winner is... <span>{@winner}!!!</span>
-              </h1>
+              <CustomComponents.winner text_class="text-7xl">
+                <:header>
+                  The winner is...
+                </:header>
+                {@winner}!!!
+              </CustomComponents.winner>
             <% @countdown -> %>
               <h1 class="text-8xl font-bold text-center" id="game-countdown">
                 {@countdown}

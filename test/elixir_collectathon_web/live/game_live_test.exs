@@ -2,6 +2,7 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
   alias ElixirCollectathonWeb.Routes
   alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
   alias ElixirCollectathon.Games.Server, as: GameServer
+  alias ElixirCollectathon.Games.Game
   use ElixirCollectathonWeb.ConnCase
   use ElixirCollectathonWeb.LiveViewCase
 
@@ -106,6 +107,25 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
       assert game_state.players |> Enum.any?(fn {_, p} -> p.name == "Charlie" end)
 
       assert_push_event(view, "game_update", ^game_state)
+    end
+  end
+
+  describe "when a winner is declared" do
+    test "shows the winner on the screen", %{conn: conn, game_id: game_id} do
+      GameServer.join(game_id, "Bob")
+
+      {:ok, view, _html} = live(conn, Routes.game(game_id))
+
+      Phoenix.PubSub.broadcast(
+        ElixirCollectathon.PubSub,
+        "game:#{game_id}",
+        {
+          :state,
+          %Game{Game.new("ABC123") | winner: "Bob"}
+        }
+      )
+
+      assert render(view) =~ "The winner is..."
     end
   end
 end

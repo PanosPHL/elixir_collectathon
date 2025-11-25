@@ -14,6 +14,7 @@ defmodule ElixirCollectathonWeb.GameLive do
   alias ElixirCollectathon.Games.Game
   alias ElixirCollectathon.Games.Server, as: GameServer
   alias ElixirCollectathonWeb.Routes
+  alias ElixirCollectathonWeb.Components.CustomComponents
   use ElixirCollectathonWeb, :live_view
 
   @doc """
