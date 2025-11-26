@@ -75,9 +75,12 @@ defmodule ElixirCollectathonWeb.ControllerLive do
 
   - `{:countdown, countdown}`: Updates the countdown timer displayed to players.
   - `:game_started`: Marks the game as started in the LiveView state.
+  - `{:game_server_shutdown, reason}`: Handles redirects if reason == :timeout, otherwise does nothing.
   - Any other messages are ignored.
   """
 
+  @spec handle_info({:state, Game.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:state, %Game{winner: winner}}, socket) when not is_nil(winner) do
     {
       :noreply,
@@ -96,6 +99,24 @@ defmodule ElixirCollectathonWeb.ControllerLive do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info(:game_started, socket) do
     {:noreply, socket |> assign(game_is_running: true)}
+  end
+
+  @spec handle_info({:game_server_shutdown, :timeout | :normal}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:game_server_shutdown, :timeout}, socket) do
+    {
+      :noreply,
+      socket
+      |> put_flash(
+        :error,
+        "Your game has timed out due to inactivity. Join a new game to conitnue playing."
+      )
+      |> redirect(to: Routes.home())
+    }
+  end
+
+  def handle_info({:game_server_shutdown, _reason}, socket) do
+    {:noreply, socket}
   end
 
   @spec handle_info(any(), Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}

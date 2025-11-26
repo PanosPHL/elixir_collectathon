@@ -120,9 +120,11 @@ defmodule ElixirCollectathonWeb.GameLive do
   @doc """
   Handles game state updates received from PubSub.
 
-  - {:state, %Game{}} handles updating the player list and pushing the game state to the client for JavaScript events.
-  - {:countdown, n} updates the countdown timer in the socket assigns.
-  - :game_started sets the game_started flag to true in the socket assigns.
+  - `{:state, %Game{}}`: handles updating the player list and pushing the game state to the client for JavaScript events.
+  - `{:countdown, n}`: updates the countdown timer in the socket assigns.
+  - `:game_started`: sets the game_started flag to true in the socket assigns.
+  - `{:game_server_shutdown, reason}`: Handles redirects if reason == :timeout, otherwise does nothing.
+  - All other messages are ignored
   """
 
   @spec handle_info({:state, Game.t()}, Phoenix.LiveView.Socket.t()) ::
@@ -158,6 +160,29 @@ defmodule ElixirCollectathonWeb.GameLive do
       socket
       |> assign(game_started: true)
     }
+  end
+
+  @spec handle_info({:game_server_shutdown, :timeout | :normal}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:game_server_shutdown, :timeout}, socket) do
+    {
+      :noreply,
+      socket
+      |> put_flash(
+        :error,
+        "Your game has timed out due to inactivity. Create a new game to conitnue playing."
+      )
+      |> redirect(to: Routes.home())
+    }
+  end
+
+  def handle_info({:game_server_shutdown, _reason}, socket) do
+    {:noreply, socket}
+  end
+
+  @spec handle_info(any(), Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info(_, socket) do
+    {:noreply, socket}
   end
 
   @doc """

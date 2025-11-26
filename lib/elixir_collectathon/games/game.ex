@@ -33,7 +33,8 @@ defmodule ElixirCollectathon.Games.Game do
           countdown: pos_integer() | String.t(),
           current_letter: Letter.t() | nil,
           winner: String.t() | nil,
-          timer_ref: :timer.tref() | nil
+          timer_ref: :timer.tref() | nil,
+          last_activity_at: integer()
         }
 
   @map_size {1024, 576}
@@ -48,7 +49,8 @@ defmodule ElixirCollectathon.Games.Game do
             countdown: 3,
             current_letter: nil,
             winner: nil,
-            timer_ref: nil
+            timer_ref: nil,
+            last_activity_at: System.monotonic_time(:millisecond)
 
   @doc """
   Creates a new game instance with the given game ID.
@@ -449,5 +451,35 @@ defmodule ElixirCollectathon.Games.Game do
   @spec stop(Game.t()) :: Game.t()
   def stop(%Game{} = game) do
     %Game{game | is_running: false, timer_ref: nil}
+  end
+
+  @doc """
+  Updates the last activity timestamp for a game.
+
+  This function records the current monotonic time in milliseconds, which is used to track
+  inactivity. When the game server detects inactivity (no activity for 10 minutes), it
+  will automatically shut down the process.
+
+  Activity includes: player joins, player leaves, velocity updates, game ticks, and
+  letter spawns. Calling this function resets the inactivity timer.
+
+  ## Parameters
+    - `game` - The game struct to update
+
+  ## Returns
+    - An updated game struct with `last_activity_at` set to the current monotonic time
+
+  ## Examples
+
+      iex> game = ElixirCollectathon.Games.Game.new("ABC123")
+      iex> original_time = game.last_activity_at
+      iex> updated = ElixirCollectathon.Games.Game.update_last_activity_at(game)
+      iex> updated.last_activity_at >= original_time
+      true
+  """
+
+  @spec update_last_activity_at(Game.t()) :: Game.t()
+  def update_last_activity_at(%Game{} = game) do
+    %Game{game | last_activity_at: System.monotonic_time(:millisecond)}
   end
 end
