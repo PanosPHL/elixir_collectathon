@@ -29,6 +29,7 @@ defmodule ElixirCollectathon.Players.Player do
   }
 
   @type velocity() :: {float(), float()}
+  @type inventory() :: list(String.t() | nil)
   @type player_num() :: 1 | 2 | 3 | 4
   @type t() :: %__MODULE__{
           color: String.t(),
@@ -36,7 +37,7 @@ defmodule ElixirCollectathon.Players.Player do
           position: Game.position(),
           hitbox: Hitbox.t(),
           velocity: velocity(),
-          inventory: list(String.t() | nil),
+          inventory: inventory(),
           player_num: player_num()
         }
 
@@ -128,6 +129,26 @@ defmodule ElixirCollectathon.Players.Player do
   end
 
   @doc """
+  Replace a player's entire inventory with the provided inventory list.
+
+  This is a low-level helper used by other Player functions. The `inventory`
+  is expected to be a list of strings (letter characters) or `nil` values with
+  the same length as the player's inventory (six slots by default).
+
+  ## Examples
+    iex> player = ElixirCollectathon.Players.Player.new("Alice", 1, {0, 0})
+    iex> inventory = ["E", nil, "I", nil, nil, nil]
+    iex> updated = ElixirCollectathon.Players.Player.set_inventory(player, inventory)
+    iex> updated.inventory
+    ["E", nil, "I", nil, nil, nil]
+  """
+
+  @spec set_inventory(Player.t(), Player.inventory()) :: Player.t()
+  def set_inventory(%Player{} = player, inventory) do
+    %Player{player | inventory: inventory}
+  end
+
+  @doc """
   Adds a collected letter to the player's inventory.
 
   ## Parameters
@@ -142,48 +163,68 @@ defmodule ElixirCollectathon.Players.Player do
       ["E", nil, nil, nil, nil, nil]
   """
   @spec add_collected_letter(Player.t(), String.t()) :: Player.t()
-  def add_collected_letter(%Player{} = player, letter) do
+  def add_collected_letter(%Player{inventory: inventory} = player, letter) do
     updated_inventory =
       case letter do
         "E" ->
-          List.replace_at(player.inventory, 0, letter)
+          List.replace_at(inventory, 0, letter)
 
         "L" ->
-          List.replace_at(player.inventory, 1, letter)
+          List.replace_at(inventory, 1, letter)
 
         "I" ->
-          if Enum.at(player.inventory, 2) == nil do
-            List.replace_at(player.inventory, 2, letter)
+          if Enum.at(inventory, 2) == nil do
+            List.replace_at(inventory, 2, letter)
           else
-            List.replace_at(player.inventory, 4, letter)
+            List.replace_at(inventory, 4, letter)
           end
 
         "X" ->
-          List.replace_at(player.inventory, 3, letter)
+          List.replace_at(inventory, 3, letter)
 
         "R" ->
-          List.replace_at(player.inventory, 5, letter)
+          List.replace_at(inventory, 5, letter)
       end
 
-    %Player{player | inventory: updated_inventory}
+    Player.set_inventory(player, updated_inventory)
+  end
+
+  @spec remove_letter_from_inventory(Player.t(), String.t()) :: Player.t()
+  def remove_letter_from_inventory(%Player{inventory: inventory} = player, letter) do
+    updated_inventory =
+      Enum.reverse(inventory)
+      |> then(fn rev_inventory ->
+        List.replace_at(
+          rev_inventory,
+          Enum.find_index(rev_inventory, fn char -> char == letter end),
+          nil
+        )
+      end)
+      |> Enum.reverse()
+
+    Player.set_inventory(player, updated_inventory)
   end
 
   @doc """
   Returns a boolean indicating whether a given player has won the game they are playing
 
-  iex> player = ElixirCollectathon.Players.Player.new("Alice", 1, {0, 0})
-  iex> ElixirCollectathon.Players.Player.has_won?(player)
-  false
+  ## Parameters
+  - `player` - The player struct to check for victory against
 
-  iex> player = ElixirCollectathon.Players.Player.new("Bob", 1, {0, 0})
-  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("E")
-  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("L")
-  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("I")
-  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("X")
-  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("I")
-  ...> |> ElixirCollectathon.Players.Player.add_collected_letter("R")
-  iex> ElixirCollectathon.Players.Player.has_won?(player)
-  true
+  ## Examples
+    iex> player = ElixirCollectathon.Players.Player.new("Alice", 1, {0, 0})
+    iex> ElixirCollectathon.Players.Player.has_won?(player)
+    false
+
+    iex> player = ElixirCollectathon.Players.Player.new("Bob", 1, {0, 0})
+    ...> |> ElixirCollectathon.Players.Player.add_collected_letter("E")
+    ...> |> ElixirCollectathon.Players.Player.add_collected_letter("L")
+    ...> |> ElixirCollectathon.Players.Player.add_collected_letter("I")
+    ...> |> ElixirCollectathon.Players.Player.add_collected_letter("X")
+    ...> |> ElixirCollectathon.Players.Player.add_collected_letter("I")
+    ...> |> ElixirCollectathon.Players.Player.add_collected_letter("R")
+    iex> ElixirCollectathon.Players.Player.has_won?(player)
+    true
   """
 
   @spec has_won?(Player.t()) :: boolean()
