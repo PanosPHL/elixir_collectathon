@@ -135,4 +135,38 @@ defmodule ElixirCollectathon.Games.ServerTest do
       assert game_state.is_running == true
     end
   end
+
+  describe "game shutdown on winner" do
+    test "game server continues running when game is active", %{game_id: game_id} do
+      GameServer.join(game_id, "Alice")
+      GameServer.join(game_id, "Bob")
+      GameServer.start_game(game_id)
+
+      assert_receive {:state, _game_state}
+
+      receive do
+        {:state, _game_state} ->
+          via = GameServer.via_tuple(game_id)
+          pid = GenServer.whereis(via)
+
+          assert is_pid(pid)
+          assert Process.alive?(pid)
+      after
+        1000 ->
+          flunk("Did not receive state updates")
+      end
+    end
+
+    test "game server stops after shutdown message is sent", %{game_id: game_id} do
+      GameServer.join(game_id, "Alice")
+      GameServer.join(game_id, "Bob")
+
+      via = GameServer.via_tuple(game_id)
+      pid = GenServer.whereis(via)
+
+      send(pid, :shutdown_game)
+
+      assert is_nil(GenServer.whereis(via))
+    end
+  end
 end

@@ -45,6 +45,21 @@ defmodule ElixirCollectathon.Games.Server do
     GenServer.start_link(__MODULE__, game_id, name: via_tuple(game_id))
   end
 
+  @spec child_spec(String.t()) :: %{
+          id: atom(),
+          start: {atom(), atom(), [String.t()]},
+          restart: atom(),
+          type: atom()
+        }
+  def child_spec(game_id) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [game_id]},
+      restart: :temporary,
+      type: :worker
+    }
+  end
+
   @doc """
   Returns the via tuple for registering/finding the server in the Registry.
 
@@ -191,6 +206,7 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   @spec init(String.t()) :: {:ok, Game.t()}
+  # Instantiates a game instance
   def init(game_id) do
     {
       :ok,
@@ -202,6 +218,7 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) ::
           {:reply, {:error, :max_players_reached}, Game.t()}
+  # Callback to handle a player joining when the max amount of players (4) has been reached
   def handle_call({:join, _player_name}, _from, %Game{players: players} = state)
       when has_four_players?(players) do
     {:reply, {:error, :max_players_reached}, state}
@@ -210,6 +227,8 @@ defmodule ElixirCollectathon.Games.Server do
   @impl GenServer
   @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) ::
           {:reply, :ok | {:error, :max_players_reached} | {:error, :already_added}, Game.t()}
+  # Callback to handle joining depending on whether or not a player with that name
+  # has already joined
   def handle_call({:join, player_name}, _from, %Game{next_player_num: next_player_num} = state) do
     case Game.has_player?(state, player_name) do
       false ->
@@ -231,12 +250,16 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
+  @spec handle_call({:join, String.t()}, GenServer.from(), Game.t()) ::
+          {:reply, {:error, :game_already_started}, Game.t()}
+  # Callback to handle joining when the game has already been started
   def handle_call({:join, _player_name}, _from, %Game{is_running: true} = state) do
     {:reply, {:error, :game_already_started}, state}
   end
 
   @impl GenServer
   @spec handle_cast({:leave, String.t()}, Game.t()) :: {:noreply, Game.t()}
+  # Callback to remove a player when they navigate away from the Controller/Joystick view
   def handle_cast({:leave, player_name}, %Game{} = state) do
     new_state =
       state
@@ -249,7 +272,8 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   @spec handle_cast(:start_countdown, Game.t()) :: {:noreply, Game.t()}
-  def handle_cast(:start_countdown, %Game{} = state) do
+  # Callback to start the countdown when the game is not already running
+  def handle_cast(:start_countdown, %Game{is_running: false} = state) do
     Process.send_after(self(), :countdown_tick, 1000)
 
     broadcast(state.game_id, {:countdown, state.countdown})
@@ -259,7 +283,8 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   @spec handle_cast(:start_game, Game.t()) :: {:noreply, Game.t()}
-  def handle_cast(:start_game, %Game{} = state) do
+  # Callback to start the game when the game is not already started
+  def handle_cast(:start_game, %Game{is_running: false} = state) do
     {:ok, timer_ref} = :timer.send_interval(@tick_rate, :tick)
 
     new_state = state |> Game.start(timer_ref)
@@ -270,9 +295,17 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @impl GenServer
-  @spec handle_cast({:velocity, String.t(), {integer(), integer()}}, Game.t()) ::
+  @spec handle_cast({:velocity, String.t(), Player.velocity()}, Game.t()) :: {:noreply, Game.t()}
+  # Callback for noop when player tries to update their velocity and the game has not been started
+  def handle_cast({:velocity, _player_name, _velocity}, %Game{is_running: false} = state) do
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  @spec handle_cast({:velocity, String.t(), Player.velocity()}, Game.t()) ::
           {:noreply, Game.t()}
-  def handle_cast({:velocity, player_name, {x, y}}, %Game{} = state) do
+  # Callback to handle player velocity update when the game has started
+  def handle_cast({:velocity, player_name, {x, y}}, %Game{is_running: true} = state) do
     {
       :noreply,
       state
@@ -282,6 +315,7 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   @spec handle_info(:countdown_tick, Game.t()) :: {:noreply, Game.t()}
+  # Callback to handle the :countdown_tick message when the countdown value is an integer (i.e. 3, 2, 1)
   def handle_info(:countdown_tick, %Game{countdown: n} = state) when is_integer(n) and n > 0 do
     broadcast(state.game_id, {:countdown, n})
 
@@ -290,6 +324,9 @@ defmodule ElixirCollectathon.Games.Server do
     {:noreply, state |> Game.countdown_to_start()}
   end
 
+  @impl GenServer
+  @spec handle_info(:countdown_tick, Game.t()) :: {:noreply, Game.t()}
+  # Callback to handle starting the game when the countdown value is "GO!"
   def handle_info(:countdown_tick, %Game{countdown: "GO!", game_id: game_id} = state) do
     broadcast(game_id, {:countdown, state.countdown})
 
@@ -302,7 +339,8 @@ defmodule ElixirCollectathon.Games.Server do
 
   @impl GenServer
   @spec handle_info(:tick, Game.t()) :: {:noreply, Game.t()}
-  def handle_info(:tick, %Game{} = state) do
+  # Callback handle game ticks when the game is running
+  def handle_info(:tick, %Game{is_running: true} = state) do
     %Game{current_letter: current_letter, winner: winner, timer_ref: timer_ref} =
       updated_state =
       Game.update_game_state(state)
@@ -313,6 +351,10 @@ defmodule ElixirCollectathon.Games.Server do
       # If there is a winner, cancel the game ticks and stop the game
       winner ->
         :timer.cancel(timer_ref)
+
+        # Shutdown game process after 300ms to ensure LiveViews have time to receive updated state
+        Process.send_after(self(), :shutdown_game, 300)
+
         {:noreply, updated_state |> Game.stop()}
 
       # If the game is running and there is no current letter spawned, spawn one
@@ -325,9 +367,27 @@ defmodule ElixirCollectathon.Games.Server do
     end
   end
 
+  @impl GenServer
+  @spec handle_info(:tick, Game.t()) :: {:noreply, Game.t()}
+  # Callback for noop when a game tick message is received and the game is not running
+  def handle_info(:tick, %Game{is_running: false} = state) do
+    {:noreply, state}
+  end
+
+  @impl GenServer
   @spec handle_info(:spawn_letter, Game.t()) :: {:noreply, Game.t()}
+  # Callback to handle spawning a letter upon the :spawn_letter message
   def handle_info(:spawn_letter, %Game{} = state) do
     {:noreply, state |> Game.spawn_letter()}
+  end
+
+  @impl GenServer
+  @spec handle_info(:shutdown_game, Game.t()) :: {:stop, :normal, Game.t()}
+  # Callback to handle stopping the game process
+  def handle_info(:shutdown_game, %Game{timer_ref: timer_ref} = state) do
+    if timer_ref, do: :timer.cancel(timer_ref)
+
+    {:stop, :normal, state}
   end
 
   # Private functions
