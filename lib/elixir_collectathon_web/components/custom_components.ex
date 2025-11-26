@@ -18,7 +18,7 @@ defmodule ElixirCollectathonWeb.Components.CustomComponents do
         </h1>
       <% end %>
       <div class="flex flex-col items-center">
-        <span class={@text_class <> " px-8 py-4 align-middle font-black text-white bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-3xl shadow-2xl inline-block animate-pulse"}>
+        <span class={@text_class <> " text-center px-8 py-4 align-middle font-black text-white bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-3xl shadow-2xl inline-block animate-pulse"}>
           {render_slot(@inner_block)}
         </span>
       </div>
