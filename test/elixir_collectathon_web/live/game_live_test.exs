@@ -128,4 +128,36 @@ defmodule ElixirCollectathonWeb.GameLiveTest do
       assert render(view) =~ "The winner is..."
     end
   end
+
+  describe "handling game server shutdown" do
+    test "does nothing when the game shuts down normally (i.e. a winner is declared)", %{
+      conn: conn,
+      game_id: game_id
+    } do
+      {:ok, view, _html} = live(conn, Routes.game(game_id))
+
+      Phoenix.PubSub.broadcast(
+        ElixirCollectathon.PubSub,
+        "game:#{game_id}",
+        {:game_server_shutdown, :normal}
+      )
+
+      assert has_element?(view, "#game-canvas")
+    end
+
+    test "redirects to home when game server shuts down unexpectedly", %{
+      conn: conn,
+      game_id: game_id
+    } do
+      {:ok, view, _html} = live(conn, Routes.game(game_id))
+
+      Phoenix.PubSub.broadcast(
+        ElixirCollectathon.PubSub,
+        "game:#{game_id}",
+        {:game_server_shutdown, :timeout}
+      )
+
+      assert_redirect(view, Routes.home())
+    end
+  end
 end

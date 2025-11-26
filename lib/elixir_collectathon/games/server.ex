@@ -23,6 +23,8 @@ defmodule ElixirCollectathon.Games.Server do
   # 30 Hz
   @tick_rate 33
 
+  @inactivity_limit_ms :timer.minutes(10)
+
   @doc """
   Starts a new game server process linked to the current process.
 
@@ -44,6 +46,30 @@ defmodule ElixirCollectathon.Games.Server do
   def start_link(game_id) do
     GenServer.start_link(__MODULE__, game_id, name: via_tuple(game_id))
   end
+
+  @doc """
+  Returns a child specification for starting this GenServer under a DynamicSupervisor.
+
+  This function is used by DynamicSupervisor to start game server processes.
+  Each game server is configured to restart as `:temporary`, meaning it will
+  not be restarted if it crashes—instead, the supervisor will clean up the process.
+
+  ## Parameters
+    - `game_id` - A unique identifier for the game
+
+  ## Returns
+    - A map with the child spec including id, start tuple, restart strategy, and type
+
+  ## Examples
+
+      iex> spec = ElixirCollectathon.Games.Server.child_spec("ABC123")
+      iex> spec.id
+      ElixirCollectathon.Games.Server
+      iex> spec.restart
+      :temporary
+      iex> spec.type
+      :worker
+  """
 
   @spec child_spec(String.t()) :: %{
           id: atom(),
@@ -205,13 +231,14 @@ defmodule ElixirCollectathon.Games.Server do
   # GenServer callbacks
 
   @impl GenServer
-  @spec init(String.t()) :: {:ok, Game.t()}
-  # Instantiates a game instance
+  @spec init(String.t()) :: {:ok, Game.t(), integer()}
+  # Instantiates a game instance with inactivity timeout
   def init(game_id) do
     {
       :ok,
       game_id
-      |> Game.new()
+      |> Game.new(),
+      @inactivity_limit_ms
     }
   end
 
@@ -235,6 +262,7 @@ defmodule ElixirCollectathon.Games.Server do
         new_state =
           state
           |> Game.spawn_player(player_name, next_player_num)
+          |> Game.update_last_activity_at()
 
         broadcast(new_state)
 
@@ -264,6 +292,7 @@ defmodule ElixirCollectathon.Games.Server do
     new_state =
       state
       |> Game.remove_player(player_name)
+      |> Game.update_last_activity_at()
 
     broadcast(new_state)
 
@@ -278,7 +307,12 @@ defmodule ElixirCollectathon.Games.Server do
 
     broadcast(state.game_id, {:countdown, state.countdown})
 
-    {:noreply, state |> Game.countdown_to_start()}
+    {
+      :noreply,
+      state
+      |> Game.countdown_to_start()
+      |> Game.update_last_activity_at()
+    }
   end
 
   @impl GenServer
@@ -287,7 +321,10 @@ defmodule ElixirCollectathon.Games.Server do
   def handle_cast(:start_game, %Game{is_running: false} = state) do
     {:ok, timer_ref} = :timer.send_interval(@tick_rate, :tick)
 
-    new_state = state |> Game.start(timer_ref)
+    new_state =
+      state
+      |> Game.start(timer_ref)
+      |> Game.update_last_activity_at()
 
     broadcast(new_state.game_id, :game_started)
 
@@ -310,60 +347,90 @@ defmodule ElixirCollectathon.Games.Server do
       :noreply,
       state
       |> Game.update_player_velocity(player_name, {x, y})
+      |> Game.update_last_activity_at()
     }
   end
 
   @impl GenServer
   @spec handle_info(:countdown_tick, Game.t()) :: {:noreply, Game.t()}
   # Callback to handle the :countdown_tick message when the countdown value is an integer (i.e. 3, 2, 1)
-  def handle_info(:countdown_tick, %Game{countdown: n} = state) when is_integer(n) and n > 0 do
+  def handle_info(:countdown_tick, %Game{countdown: n, is_running: false} = state)
+      when is_integer(n) and n > 0 do
     broadcast(state.game_id, {:countdown, n})
 
     Process.send_after(self(), :countdown_tick, 1000)
 
-    {:noreply, state |> Game.countdown_to_start()}
+    {
+      :noreply,
+      state
+      |> Game.countdown_to_start()
+      |> Game.update_last_activity_at()
+    }
   end
 
   @impl GenServer
   @spec handle_info(:countdown_tick, Game.t()) :: {:noreply, Game.t()}
   # Callback to handle starting the game when the countdown value is "GO!"
-  def handle_info(:countdown_tick, %Game{countdown: "GO!", game_id: game_id} = state) do
+  def handle_info(
+        :countdown_tick,
+        %Game{countdown: "GO!", game_id: game_id, is_running: false} = state
+      ) do
     broadcast(game_id, {:countdown, state.countdown})
 
     :timer.apply_after(1000, GameServer, :start_game, [
       game_id
     ])
 
+    {
+      :noreply,
+      state
+      |> Game.update_last_activity_at()
+    }
+  end
+
+  @impl GenServer
+  @spec handle_info(:countdown_tick, Game.t()) :: {:noreply, Game.t()}
+  # Callback for noop when a :countdown_tick message is received and a game has already started
+  def handle_info(:countdown_tick, %Game{is_running: true} = state) do
     {:noreply, state}
   end
 
   @impl GenServer
   @spec handle_info(:tick, Game.t()) :: {:noreply, Game.t()}
-  # Callback handle game ticks when the game is running
-  def handle_info(:tick, %Game{is_running: true} = state) do
-    %Game{current_letter: current_letter, winner: winner, timer_ref: timer_ref} =
-      updated_state =
-      Game.update_game_state(state)
+  # Callback handle game ticks when the game is running. If the inactivity limit is passed,
+  # the game server times out and shuts down. Otherwise, the game continues as normal.
+  def handle_info(:tick, %Game{is_running: true, last_activity_at: last_activity_at} = state) do
+    now = System.monotonic_time(:millisecond)
 
-    broadcast(updated_state)
+    if now - last_activity_at > @inactivity_limit_ms do
+      send(self(), {:shutdown_game, :timeout})
 
-    cond do
-      # If there is a winner, cancel the game ticks and stop the game
-      winner ->
-        :timer.cancel(timer_ref)
+      {:noreply, state}
+    else
+      %Game{current_letter: current_letter, winner: winner, timer_ref: timer_ref} =
+        updated_state =
+        Game.update_game_state(state)
 
-        # Shutdown game process after 300ms to ensure LiveViews have time to receive updated state
-        Process.send_after(self(), :shutdown_game, 300)
+      broadcast(updated_state)
 
-        {:noreply, updated_state |> Game.stop()}
+      cond do
+        # If there is a winner, cancel the game ticks and stop the game
+        winner ->
+          :timer.cancel(timer_ref)
 
-      # If the game is running and there is no current letter spawned, spawn one
-      is_nil(current_letter) ->
-        {:noreply, updated_state |> Game.spawn_letter()}
+          # Shutdown game process after 300ms to ensure LiveViews have time to receive updated state
+          Process.send_after(self(), {:shutdown_game, :normal}, 300)
 
-      # Otherwise, just return the game state
-      true ->
-        {:noreply, updated_state}
+          {:noreply, updated_state |> Game.stop()}
+
+        # If the game is running and there is no current letter spawned, spawn one
+        is_nil(current_letter) ->
+          {:noreply, updated_state |> Game.spawn_letter()}
+
+        # Otherwise, just return the game state
+        true ->
+          {:noreply, updated_state}
+      end
     end
   end
 
@@ -378,16 +445,41 @@ defmodule ElixirCollectathon.Games.Server do
   @spec handle_info(:spawn_letter, Game.t()) :: {:noreply, Game.t()}
   # Callback to handle spawning a letter upon the :spawn_letter message
   def handle_info(:spawn_letter, %Game{} = state) do
-    {:noreply, state |> Game.spawn_letter()}
+    {
+      :noreply,
+      state
+      |> Game.spawn_letter()
+      |> Game.update_last_activity_at()
+    }
   end
 
   @impl GenServer
-  @spec handle_info(:shutdown_game, Game.t()) :: {:stop, :normal, Game.t()}
+  @spec handle_info({:shutdown_game, :normal | :timeout}, Game.t()) :: {:stop, :normal, Game.t()}
   # Callback to handle stopping the game process
-  def handle_info(:shutdown_game, %Game{timer_ref: timer_ref} = state) do
+  def handle_info(
+        {:shutdown_game, reason},
+        %Game{game_id: game_id, timer_ref: timer_ref} = state
+      ) do
     if timer_ref, do: :timer.cancel(timer_ref)
 
-    {:stop, :normal, state}
+    broadcast(game_id, {:game_server_shutdown, reason})
+
+    {
+      :stop,
+      :normal,
+      state
+      |> Game.stop()
+    }
+  end
+
+  @impl GenServer
+  @spec handle_info(:timeout, Game.t()) :: {:noreply, Game.t()}
+  # Callback to handle the :timeout send a new message to shut down
+  # the game server.
+  def handle_info(:timeout, %Game{} = state) do
+    send(self(), {:shutdown_game, :timeout})
+
+    {:noreply, state}
   end
 
   # Private functions

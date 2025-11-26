@@ -11,7 +11,8 @@ defmodule ElixirCollectathonWeb.HomeControllerTest do
     end
 
     test "clears game_id from session", %{conn: conn} do
-      conn = conn
+      conn =
+        conn
         |> init_test_session(%{})
         |> put_session(:game_id, "ABC123")
         |> get("/")
@@ -20,7 +21,8 @@ defmodule ElixirCollectathonWeb.HomeControllerTest do
     end
 
     test "clears player from session", %{conn: conn} do
-      conn = conn
+      conn =
+        conn
         |> init_test_session(%{})
         |> put_session(:player, "Alice")
         |> get("/")
@@ -46,7 +48,8 @@ defmodule ElixirCollectathonWeb.HomeControllerTest do
       GameServer.join(game_id, "Alice")
 
       # Set session
-      conn = conn
+      conn =
+        conn
         |> init_test_session(%{})
         |> put_session(:game_id, game_id)
         |> put_session(:player, "Alice")
@@ -58,6 +61,7 @@ defmodule ElixirCollectathonWeb.HomeControllerTest do
 
       # Clean up
       pid = GenServer.whereis(GameServer.via_tuple(game_id))
+
       if pid && Process.alive?(pid) do
         GenServer.stop(pid, :normal, 100)
       end
