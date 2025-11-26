@@ -290,10 +290,12 @@ defmodule ElixirCollectathon.Games.Server do
     {:noreply, state |> Game.countdown_to_start()}
   end
 
-  def handle_info(:countdown_tick, %Game{countdown: "GO!"} = state) do
-    broadcast(state.game_id, {:countdown, state.countdown})
+  def handle_info(:countdown_tick, %Game{countdown: "GO!", game_id: game_id} = state) do
+    broadcast(game_id, {:countdown, state.countdown})
 
-    :timer.apply_after(1000, fn -> GameServer.start_game(state.game_id) end)
+    :timer.apply_after(1000, GameServer, :start_game, [
+      game_id
+    ])
 
     {:noreply, state}
   end

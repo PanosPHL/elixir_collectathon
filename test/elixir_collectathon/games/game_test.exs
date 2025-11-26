@@ -226,7 +226,8 @@ defmodule ElixirCollectathon.Games.GameTest do
     end
 
     test "sets the timer_ref if one is provided" do
-      {:ok, timer_ref} = :timer.apply_after(1000, fn -> IO.puts("Hello world") end)
+      {:ok, timer_ref} =
+        :timer.apply_after(1000, IO, :puts, ["Hello World"])
 
       game =
         Game.new("ABC123")
