@@ -79,17 +79,20 @@ defmodule ElixirCollectathon.Entities.Spawner do
 
   @spec spawn_player(String.t(), Player.player_num()) :: Player.t()
   def spawn_player(player_name, player_num) do
+    position = get_player_spawn_position(player_num)
+    Player.new(player_name, player_num, position)
+  end
+
+  @spec get_player_spawn_position(Player.player_num()) :: Game.position()
+  defp get_player_spawn_position(player_num) when player_num in 1..4  do
     {map_x, map_y} = Game.get_map_size()
     player_size = Player.get_player_size()
 
-    position =
-      case player_num do
-        1 -> {0, 0}
-        2 -> {map_x - player_size, 0}
-        3 -> {0, map_y - player_size}
-        4 -> {map_x - player_size, map_y - player_size}
-      end
-
-    Player.new(player_name, player_num, position)
+    case player_num do
+      1 -> {0, 0}
+      2 -> {map_x - player_size, 0}
+      3 -> {0, map_y - player_size}
+      4 -> {map_x - player_size, map_y - player_size}
+    end
   end
 end

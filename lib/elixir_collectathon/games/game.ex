@@ -473,6 +473,7 @@ defmodule ElixirCollectathon.Games.Game do
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
       iex> original_time = game.last_activity_at
+      iex> :timer.sleep(10)
       iex> updated = ElixirCollectathon.Games.Game.update_last_activity_at(game)
       iex> updated.last_activity_at >= original_time
       true

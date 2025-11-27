@@ -225,7 +225,7 @@ defmodule ElixirCollectathon.Games.Server do
 
   @spec does_game_exist?(String.t()) :: boolean()
   def does_game_exist?(game_id) do
-    not is_nil(GenServer.whereis(via_tuple(game_id)))
+    GenServer.whereis(via_tuple(game_id)) != nil
   end
 
   # GenServer callbacks
