@@ -38,14 +38,14 @@ defmodule ElixirCollectathon.Games.Supervisor do
     game_id = Utils.generate_code()
 
     with false <- GameServer.does_game_exist?(game_id),
-        {:ok, _server_pid} <- DynamicSupervisor.start_child(__MODULE__, {GameServer, game_id}) do
-          {:ok, game_id}
-        else
-          true -> create_game(count + 1)
-          {:error, :already_started} -> create_game(count + 1)
-          _ -> {:error, :max_retries}
-        end
+         {:ok, _server_pid} <- DynamicSupervisor.start_child(__MODULE__, {GameServer, game_id}) do
+      {:ok, game_id}
+    else
+      true -> create_game(count + 1)
+      {:error, :already_started} -> create_game(count + 1)
+      _ -> {:error, :max_retries}
+    end
   end
 
-  def create_game(count) when count > 5 , do: {:error, :max_retries}
+  def create_game(count) when count > 5, do: {:error, :max_retries}
 end

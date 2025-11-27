@@ -100,9 +100,7 @@ defmodule ElixirCollectathon.Players.Player do
   """
 
   @spec set_velocity(Player.t(), Player.velocity()) :: Player.t()
-  def set_velocity(%Player{} = player, velocity) do
-    %Player{player | velocity: velocity}
-  end
+  def set_velocity(%Player{} = player, velocity), do: %Player{player | velocity: velocity}
 
   @doc """
   Updates the position of a player.
@@ -144,9 +142,7 @@ defmodule ElixirCollectathon.Players.Player do
   """
 
   @spec set_inventory(Player.t(), Player.inventory()) :: Player.t()
-  def set_inventory(%Player{} = player, inventory) do
-    %Player{player | inventory: inventory}
-  end
+  def set_inventory(%Player{} = player, inventory), do: %Player{player | inventory: inventory}
 
   @doc """
   Adds a collected letter to the player's inventory.
@@ -230,9 +226,7 @@ defmodule ElixirCollectathon.Players.Player do
   """
 
   @spec has_won?(Player.t()) :: boolean()
-  def has_won?(%Player{inventory: inventory}) do
-    inventory == ~w(E L I X I R)
-  end
+  def has_won?(%Player{inventory: inventory}), do: inventory == ~w(E L I X I R)
 
   @doc """
   Returns the size of a player.
@@ -242,7 +236,5 @@ defmodule ElixirCollectathon.Players.Player do
       40
   """
   @spec get_player_size() :: pos_integer()
-  def get_player_size() do
-    @player_lw
-  end
+  def get_player_size(), do: @player_lw
 end

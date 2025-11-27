@@ -84,7 +84,7 @@ defmodule ElixirCollectathon.Entities.Spawner do
   end
 
   @spec get_player_spawn_position(Player.player_num()) :: Game.position()
-  defp get_player_spawn_position(player_num) when player_num in 1..4  do
+  defp get_player_spawn_position(player_num) when player_num in 1..4 do
     {map_x, map_y} = Game.get_map_size()
     player_size = Player.get_player_size()
 

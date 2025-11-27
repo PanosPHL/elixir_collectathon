@@ -74,7 +74,12 @@ defmodule ElixirCollectathon.Games.MovementResolver do
 
   # Checks if a position would collide with any occupied hitbox
   # Optimized to avoid creating intermediate hitbox until needed
-  @spec check_collision_at(Game.position(), pos_integer(), list({String.t(), Hitbox.t()}), String.t()) :: boolean()
+  @spec check_collision_at(
+          Game.position(),
+          pos_integer(),
+          list({String.t(), Hitbox.t()}),
+          String.t()
+        ) :: boolean()
   defp check_collision_at({x, y}, size, occupied, player_name) do
     test_hitbox = Hitbox.new({x, y}, size)
     CollisionDetector.collides_with_any?(test_hitbox, occupied, player_name)
