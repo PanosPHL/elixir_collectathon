@@ -40,7 +40,8 @@ defmodule ElixirCollectathon.Games.Game do
   @map_size {1024, 576}
   @movement_speed 15
 
-  @derive {Jason.Encoder, except: [:tick_count, :next_player_num, :countdown, :timer_ref]}
+  @derive {Jason.Encoder,
+           except: [:tick_count, :next_player_num, :countdown, :timer_ref, :last_activity_at]}
   defstruct game_id: "",
             tick_count: 0,
             is_running: false,
@@ -68,9 +69,7 @@ defmodule ElixirCollectathon.Games.Game do
   """
 
   @spec new(String.t()) :: Game.t()
-  def new(game_id) do
-    %Game{game_id: game_id}
-  end
+  def new(game_id), do: %Game{game_id: game_id}
 
   @doc """
   Adds a player to the game.
@@ -161,9 +160,7 @@ defmodule ElixirCollectathon.Games.Game do
   """
 
   @spec get_map_size() :: {pos_integer(), pos_integer()}
-  def get_map_size() do
-    @map_size
-  end
+  def get_map_size(), do: @map_size
 
   @doc """
   Sets the players map for a game.
@@ -184,9 +181,7 @@ defmodule ElixirCollectathon.Games.Game do
   """
 
   @spec set_players(Game.t(), Game.players()) :: Game.t()
-  def set_players(%Game{} = game, players) do
-    %Game{game | players: players}
-  end
+  def set_players(%Game{} = game, players), do: %Game{game | players: players}
 
   @doc """
   Checks if a player with the given name exists in the game.
@@ -207,9 +202,7 @@ defmodule ElixirCollectathon.Games.Game do
   """
 
   @spec has_player?(Game.t(), String.t()) :: boolean()
-  def has_player?(%Game{} = game, player_name) do
-    Map.has_key?(game.players, player_name)
-  end
+  def has_player?(%Game{} = game, player_name), do: Map.has_key?(game.players, player_name)
 
   @doc """
   Decrements the countdown to starting a game
@@ -229,13 +222,9 @@ defmodule ElixirCollectathon.Games.Game do
 
   @spec countdown_to_start(Game.t()) :: Game.t()
   def countdown_to_start(%Game{countdown: countdown} = game)
-      when is_integer(countdown) and countdown > 1 do
-    %Game{game | countdown: countdown - 1}
-  end
+      when is_integer(countdown) and countdown > 1, do: %Game{game | countdown: countdown - 1}
 
-  def countdown_to_start(%Game{countdown: 1} = game) do
-    %Game{game | countdown: "GO!"}
-  end
+  def countdown_to_start(%Game{countdown: 1} = game), do: %Game{game | countdown: "GO!"}
 
   @doc """
   Starts the game
@@ -320,8 +309,8 @@ defmodule ElixirCollectathon.Games.Game do
     player_size = Player.get_player_size()
 
     initial_occupied =
-      Enum.map(players, fn {name, %Player{hitbox: player_hitbox}} ->
-        {name, player_hitbox}
+      Enum.map(players, fn {name, player} ->
+        {name, player.hitbox}
       end)
 
     {new_players, _occ} =
@@ -371,15 +360,12 @@ defmodule ElixirCollectathon.Games.Game do
   @spec check_letter_collisions(Game.t()) :: Game.t()
   defp check_letter_collisions(%Game{current_letter: letter, players: players} = game)
        when is_map(letter) do
-    case Enum.find(players, fn {_name, player} ->
-           CollisionDetector.collides?(letter.hitbox, player.hitbox)
-         end) do
-      {_, player} ->
-        InventoryManager.handle_collected_letter(game, player)
+    found_player =
+      Enum.find_value(players, fn {_name, player} ->
+        if CollisionDetector.collides?(letter.hitbox, player.hitbox), do: player
+      end)
 
-      nil ->
-        game
-    end
+    if found_player, do: InventoryManager.handle_collected_letter(game, found_player), else: game
   end
 
   defp check_letter_collisions(%Game{} = game) do
@@ -390,28 +376,22 @@ defmodule ElixirCollectathon.Games.Game do
   # winner in the game state/struct
   @spec check_winner(Game.t()) :: Game.t()
   defp check_winner(%Game{players: players} = game) do
-    case Enum.find(players, fn {_name, player} ->
-           Player.has_won?(player)
-         end) do
-      {name, _player} ->
-        game
-        |> declare_winner(name)
+    winner_name =
+      Enum.find_value(players, fn {name, player} ->
+        if Player.has_won?(player), do: name
+      end)
 
-      nil ->
-        game
-    end
+    if winner_name, do: game |> declare_winner(winner_name), else: game
   end
 
   # Sets the declared winner in the game struct
   @spec declare_winner(Game.t(), String.t()) :: Game.t()
-  defp declare_winner(%Game{} = game, winner) when not is_nil(winner) do
-    %Game{game | winner: winner}
-  end
+  defp declare_winner(%Game{} = game, winner) when not is_nil(winner),
+    do: %Game{game | winner: winner}
 
   @spec increment_tick_count(Game.t()) :: Game.t()
-  defp increment_tick_count(%Game{tick_count: tick_count} = game) do
-    %Game{game | tick_count: tick_count + 1}
-  end
+  defp increment_tick_count(%Game{tick_count: tick_count} = game),
+    do: %Game{game | tick_count: tick_count + 1}
 
   @doc """
   Spawns a letter in a random place on the map that is not currently occupied by a player
@@ -426,9 +406,8 @@ defmodule ElixirCollectathon.Games.Game do
     true
   """
   @spec spawn_letter(Game.t()) :: Game.t()
-  def spawn_letter(%Game{} = game) do
-    %Game{game | current_letter: Spawner.spawn_letter(game.players)}
-  end
+  def spawn_letter(%Game{} = game),
+    do: %Game{game | current_letter: Spawner.spawn_letter(game.players)}
 
   @doc """
   Stops the game currently in place
@@ -449,9 +428,7 @@ defmodule ElixirCollectathon.Games.Game do
   """
 
   @spec stop(Game.t()) :: Game.t()
-  def stop(%Game{} = game) do
-    %Game{game | is_running: false, timer_ref: nil}
-  end
+  def stop(%Game{} = game), do: %Game{game | is_running: false, timer_ref: nil}
 
   @doc """
   Updates the last activity timestamp for a game.
@@ -473,13 +450,13 @@ defmodule ElixirCollectathon.Games.Game do
 
       iex> game = ElixirCollectathon.Games.Game.new("ABC123")
       iex> original_time = game.last_activity_at
+      iex> :timer.sleep(10)
       iex> updated = ElixirCollectathon.Games.Game.update_last_activity_at(game)
       iex> updated.last_activity_at >= original_time
       true
   """
 
   @spec update_last_activity_at(Game.t()) :: Game.t()
-  def update_last_activity_at(%Game{} = game) do
-    %Game{game | last_activity_at: System.monotonic_time(:millisecond)}
-  end
+  def update_last_activity_at(%Game{} = game),
+    do: %Game{game | last_activity_at: System.monotonic_time(:millisecond)}
 end

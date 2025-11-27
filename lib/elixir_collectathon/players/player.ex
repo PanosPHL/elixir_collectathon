@@ -100,9 +100,7 @@ defmodule ElixirCollectathon.Players.Player do
   """
 
   @spec set_velocity(Player.t(), Player.velocity()) :: Player.t()
-  def set_velocity(%Player{} = player, velocity) do
-    %Player{player | velocity: velocity}
-  end
+  def set_velocity(%Player{} = player, velocity), do: %Player{player | velocity: velocity}
 
   @doc """
   Updates the position of a player.
@@ -144,9 +142,7 @@ defmodule ElixirCollectathon.Players.Player do
   """
 
   @spec set_inventory(Player.t(), Player.inventory()) :: Player.t()
-  def set_inventory(%Player{} = player, inventory) do
-    %Player{player | inventory: inventory}
-  end
+  def set_inventory(%Player{} = player, inventory), do: %Player{player | inventory: inventory}
 
   @doc """
   Adds a collected letter to the player's inventory.
@@ -164,45 +160,47 @@ defmodule ElixirCollectathon.Players.Player do
   """
   @spec add_collected_letter(Player.t(), String.t()) :: Player.t()
   def add_collected_letter(%Player{inventory: inventory} = player, letter) do
-    updated_inventory =
-      case letter do
-        "E" ->
-          List.replace_at(inventory, 0, letter)
-
-        "L" ->
-          List.replace_at(inventory, 1, letter)
-
-        "I" ->
-          if Enum.at(inventory, 2) == nil do
-            List.replace_at(inventory, 2, letter)
-          else
-            List.replace_at(inventory, 4, letter)
-          end
-
-        "X" ->
-          List.replace_at(inventory, 3, letter)
-
-        "R" ->
-          List.replace_at(inventory, 5, letter)
-      end
-
+    updated_inventory = place_letter_in_inventory(inventory, letter)
     Player.set_inventory(player, updated_inventory)
   end
 
+  # Places a letter in the correct position in the inventory.
+  # Special handling for "I" which can occupy positions 2 or 4.
+  @spec place_letter_in_inventory(Player.inventory(), String.t()) :: Player.inventory()
+  defp place_letter_in_inventory(inventory, "E"), do: List.replace_at(inventory, 0, "E")
+  defp place_letter_in_inventory(inventory, "L"), do: List.replace_at(inventory, 1, "L")
+
+  defp place_letter_in_inventory(inventory, "I") do
+    if Enum.at(inventory, 2) == nil do
+      List.replace_at(inventory, 2, "I")
+    else
+      List.replace_at(inventory, 4, "I")
+    end
+  end
+
+  defp place_letter_in_inventory(inventory, "X"), do: List.replace_at(inventory, 3, "X")
+  defp place_letter_in_inventory(inventory, "R"), do: List.replace_at(inventory, 5, "R")
+
   @spec remove_letter_from_inventory(Player.t(), String.t()) :: Player.t()
   def remove_letter_from_inventory(%Player{inventory: inventory} = player, letter) do
-    updated_inventory =
-      Enum.reverse(inventory)
-      |> then(fn rev_inventory ->
-        List.replace_at(
-          rev_inventory,
-          Enum.find_index(rev_inventory, fn char -> char == letter end),
-          nil
-        )
-      end)
-      |> Enum.reverse()
+    # Remove from the rightmost position (highest index) to match removal priority
+    case find_last_index(inventory, letter) do
+      nil ->
+        player
 
-    Player.set_inventory(player, updated_inventory)
+      index ->
+        updated_inventory = List.replace_at(inventory, index, nil)
+        Player.set_inventory(player, updated_inventory)
+    end
+  end
+
+  # Finds the rightmost index of a letter in the inventory
+  @spec find_last_index(Player.inventory(), String.t()) :: non_neg_integer() | nil
+  defp find_last_index(inventory, letter) do
+    inventory
+    |> Enum.with_index()
+    |> Enum.reverse()
+    |> Enum.find_value(fn {char, index} -> char == letter && index end)
   end
 
   @doc """
@@ -228,9 +226,7 @@ defmodule ElixirCollectathon.Players.Player do
   """
 
   @spec has_won?(Player.t()) :: boolean()
-  def has_won?(%Player{inventory: inventory}) do
-    inventory == ~w(E L I X I R)
-  end
+  def has_won?(%Player{inventory: inventory}), do: inventory == ~w(E L I X I R)
 
   @doc """
   Returns the size of a player.
@@ -240,7 +236,5 @@ defmodule ElixirCollectathon.Players.Player do
       40
   """
   @spec get_player_size() :: pos_integer()
-  def get_player_size() do
-    @player_lw
-  end
+  def get_player_size(), do: @player_lw
 end

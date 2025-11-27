@@ -43,7 +43,7 @@ defmodule ElixirCollectathon.Players.PlayerTest do
     test "initializes velocity to {0, 0}" do
       player = Player.new("Alice", 1, {0, 0})
 
-      assert player.velocity == {0, 0}
+      assert player.velocity == {0.0, 0.0}
     end
 
     test "initializes inventory with 6 nil values" do

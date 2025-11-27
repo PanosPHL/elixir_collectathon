@@ -225,7 +225,7 @@ defmodule ElixirCollectathon.Games.Server do
 
   @spec does_game_exist?(String.t()) :: boolean()
   def does_game_exist?(game_id) do
-    not is_nil(GenServer.whereis(via_tuple(game_id)))
+    GenServer.whereis(via_tuple(game_id)) != nil
   end
 
   # GenServer callbacks
@@ -400,9 +400,7 @@ defmodule ElixirCollectathon.Games.Server do
   # Callback handle game ticks when the game is running. If the inactivity limit is passed,
   # the game server times out and shuts down. Otherwise, the game continues as normal.
   def handle_info(:tick, %Game{is_running: true, last_activity_at: last_activity_at} = state) do
-    now = System.monotonic_time(:millisecond)
-
-    if now - last_activity_at > @inactivity_limit_ms do
+    if has_inactivity_exceeded?(last_activity_at) do
       send(self(), {:shutdown_game, :timeout})
 
       {:noreply, state}
@@ -483,6 +481,12 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   # Private functions
+  @spec has_inactivity_exceeded?(integer()) :: boolean()
+  defp has_inactivity_exceeded?(last_activity_at) do
+    now = System.monotonic_time(:millisecond)
+    now - last_activity_at > @inactivity_limit_ms
+  end
+
   @spec broadcast(String.t(), any()) :: :ok
   defp broadcast(game_id, payload) do
     PubSub.broadcast(

@@ -92,7 +92,7 @@ defmodule ElixirCollectathon.Players.InventoryManager do
 
     game
     |> Game.set_players(updated_players)
-    |> then(fn g -> %Game{g | current_letter: nil} end)
+    |> then(fn g -> %{g | current_letter: nil} end)
   end
 
   @spec filter_players_by_letter_in_inventory(
@@ -102,32 +102,16 @@ defmodule ElixirCollectathon.Players.InventoryManager do
         ) :: list(Player.t())
   defp filter_players_by_letter_in_inventory(players, self, char) do
     Enum.filter(players, fn {other_name, %Player{inventory: other_inventory}} ->
-      self != other_name and has_letter_in_inventory?(other_inventory, char)
+      self != other_name and Enum.any?(other_inventory, &(&1 == char))
     end)
-  end
-
-  @spec has_letter_in_inventory?(Player.inventory(), String.t()) :: boolean()
-  defp has_letter_in_inventory?(inventory, char) do
-    case Enum.find(inventory, fn letter ->
-           letter == char
-         end) do
-      nil ->
-        false
-
-      _ ->
-        true
-    end
   end
 
   @spec has_max_letter_in_inventory?(Player.inventory(), String.t()) :: boolean()
   defp has_max_letter_in_inventory?(inventory, char) do
-    Enum.frequencies(inventory)
-    |> then(fn freq ->
-      if char == "I" do
-        Map.get(freq, char) == 2
-      else
-        Map.get(freq, char) == 1
+    Enum.count(inventory, fn letter -> letter == char end) >=
+      case char do
+        "I" -> 2
+        _ -> 1
       end
-    end)
   end
 end

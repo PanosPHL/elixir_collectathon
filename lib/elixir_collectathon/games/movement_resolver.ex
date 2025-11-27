@@ -51,21 +51,17 @@ defmodule ElixirCollectathon.Games.MovementResolver do
           pos_integer()
         ) :: {Game.position(), Hitbox.t()}
   def resolve(%Player{position: {px, py}, name: player_name}, {tx, ty}, occupied, size) do
-    new_x_hitbox =
-      Hitbox.new({tx, py}, size)
-
+    # Resolve X-axis movement first
     final_x =
-      if CollisionDetector.collides_with_any?(new_x_hitbox, occupied, player_name) do
+      if check_collision_at({tx, py}, size, occupied, player_name) do
         px
       else
         tx
       end
 
-    new_y_hitbox =
-      Hitbox.new({final_x, ty}, size)
-
+    # Then resolve Y-axis movement using the resolved X position
     final_y =
-      if CollisionDetector.collides_with_any?(new_y_hitbox, occupied, player_name) do
+      if check_collision_at({final_x, ty}, size, occupied, player_name) do
         py
       else
         ty
@@ -74,5 +70,18 @@ defmodule ElixirCollectathon.Games.MovementResolver do
     final_pos = {final_x, final_y}
 
     {final_pos, Hitbox.new(final_pos, size)}
+  end
+
+  # Checks if a position would collide with any occupied hitbox
+  # Optimized to avoid creating intermediate hitbox until needed
+  @spec check_collision_at(
+          Game.position(),
+          pos_integer(),
+          list({String.t(), Hitbox.t()}),
+          String.t()
+        ) :: boolean()
+  defp check_collision_at({x, y}, size, occupied, player_name) do
+    test_hitbox = Hitbox.new({x, y}, size)
+    CollisionDetector.collides_with_any?(test_hitbox, occupied, player_name)
   end
 end

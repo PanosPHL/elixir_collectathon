@@ -168,6 +168,8 @@ defmodule ElixirCollectathon.Games.ServerTest do
 
       receive do
         {:game_server_shutdown, :normal} ->
+          # Allow GenServer to fully terminate
+          :timer.sleep(10)
           assert is_nil(GenServer.whereis(via))
       after
         1000 ->
