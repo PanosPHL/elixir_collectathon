@@ -19,26 +19,17 @@ defmodule ElixirCollectathonWeb.HomeController do
   """
 
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def index(conn, %{"form_view" => form_view, "game_id" => game_id}) do
-    leave_current_game(conn)
-
-    delete_game_session(conn)
-    |> live_render(ElixirCollectathonWeb.HomeLive,
-      session: %{"form_view" => form_view, "game_id" => game_id}
-    )
-  end
-
-  def index(conn, %{"form_view" => form_view}) do
-    leave_current_game(conn)
-
-    delete_game_session(conn)
-    |> live_render(ElixirCollectathonWeb.HomeLive, session: %{"form_view" => form_view})
+  def index(conn, %{"form_view" => _form_view} = params) do
+    conn
+    |> leave_current_game()
+    |> delete_game_session()
+    |> live_render(ElixirCollectathonWeb.HomeLive, session: params)
   end
 
   def index(conn, _params) do
-    leave_current_game(conn)
-
-    delete_game_session(conn)
+    conn
+    |> leave_current_game()
+    |> delete_game_session()
     |> live_render(ElixirCollectathonWeb.HomeLive)
   end
 
@@ -49,12 +40,11 @@ defmodule ElixirCollectathonWeb.HomeController do
   end
 
   defp leave_current_game(conn) do
-    case get_session(conn) do
-      %{"game_id" => game_id, "player" => player} ->
-        GameServer.leave(game_id, player)
-
-      _ ->
-        nil
+    with game_id when is_binary(game_id) <- get_session(conn, :game_id),
+         player when is_binary(player) <- get_session(conn, :player) do
+      GameServer.leave(game_id, player)
     end
+
+    conn
   end
 end
