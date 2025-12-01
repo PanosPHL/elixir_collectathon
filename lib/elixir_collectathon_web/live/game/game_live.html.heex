@@ -41,11 +41,13 @@
         </div>
       <% end %>
       <canvas
-        class="block w-full aspect-video border border-base-content"
+        class="block w-full aspect-video border-2 border-base-content/20 ring-1 ring-base-content/10 ring-offset-1 ring-offset-base-100 shadow-md bg-base-200"
         id="game-canvas"
         height="576"
         width="1024"
         phx-hook="Game"
+        aria-label="Game canvas"
+        role="img"
       >
       </canvas>
     </div>

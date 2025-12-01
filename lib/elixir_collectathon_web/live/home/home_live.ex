@@ -156,36 +156,27 @@ defmodule ElixirCollectathonWeb.HomeLive do
         %{"game_id" => game_id, "player_name" => player_name} = params,
         socket
       ) do
-    # Game does not exist with given ID
     if not GameServer.does_game_exist?(game_id) do
-      game_does_not_exist_res(params, socket)
+      handle_join_result({:error, :game_does_not_exist}, params, socket)
     else
-      case GameServer.join(game_id, player_name) do
-        # Player successfully joined game
-        :ok ->
-          successful_join_res(socket)
-
-        # Game already has 4 players
-        {:error, :max_players_reached} ->
-          max_players_reached_res(socket)
-
-        # Game already has player of submitted name
-        {:error, :already_added} ->
-          player_already_exists_res(params, socket)
-
-        {:error, :game_already_started} ->
-          game_already_started_res(params, socket)
-
-        # Catch all error
-        _ ->
-          generic_error_res(socket)
-      end
+      GameServer.join(game_id, player_name)
+      |> handle_join_result(params, socket)
     end
   end
 
-  @spec game_does_not_exist_res(map(), Phoenix.LiveView.Socket.t()) ::
+  @spec handle_join_result(:ok, map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  defp game_does_not_exist_res(params, socket) do
+  defp handle_join_result(:ok, _params, socket) do
+    {
+      :noreply,
+      socket
+      |> assign(trigger_join_game: true)
+    }
+  end
+
+  @spec handle_join_result({:error, atom()}, map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  defp handle_join_result({:error, :game_does_not_exist}, params, socket) do
     errors = [game_id: {"No game exists with this ID.", []}]
 
     {
@@ -195,19 +186,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
     }
   end
 
-  @spec successful_join_res(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  defp successful_join_res(socket) do
-    {
-      :noreply,
-      socket
-      |> assign(trigger_join_game: true)
-    }
-  end
-
-  @spec max_players_reached_res(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  defp max_players_reached_res(socket) do
+  defp handle_join_result({:error, :max_players_reached}, _params, socket) do
     {
       :noreply,
       socket
@@ -215,9 +194,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
     }
   end
 
-  @spec player_already_exists_res(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  defp player_already_exists_res(params, socket) do
+  defp handle_join_result({:error, :already_added}, params, socket) do
     errors = [player_name: {"A player with this name already exists in this game.", []}]
 
     {
@@ -227,7 +204,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
     }
   end
 
-  defp game_already_started_res(params, socket) do
+  defp handle_join_result({:error, :game_already_started}, params, socket) do
     errors = [game_id: {"This game has already started. Try joining a different game.", []}]
 
     {
@@ -237,7 +214,7 @@ defmodule ElixirCollectathonWeb.HomeLive do
     }
   end
 
-  defp generic_error_res(socket) do
+  defp handle_join_result(_other, _params, socket) do
     {
       :noreply,
       socket

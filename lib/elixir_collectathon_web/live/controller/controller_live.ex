@@ -48,7 +48,7 @@ defmodule ElixirCollectathonWeb.ControllerLive do
       :ok,
       socket
       |> put_flash(:error, "You are not currently in this game, please join a game to play.")
-      |> push_navigate(to: Routes.home())
+      |> redirect(to: Routes.home())
     }
   end
 

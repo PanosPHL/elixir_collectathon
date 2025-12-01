@@ -15,7 +15,7 @@ defmodule ElixirCollectathonWeb.ControllerLiveTest do
 
   describe "mount/3" do
     test "redirects to home if no player in session", %{conn: conn, game_id: game_id} do
-      assert {:error, {:live_redirect, %{to: "/"}}} =
+      assert {:error, {:redirect, %{to: "/"}}} =
                live(conn, Routes.controller(game_id))
     end
 

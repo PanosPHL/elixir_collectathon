@@ -19,7 +19,7 @@ defmodule ElixirCollectathonWeb.HomeLiveTest do
     test "assigns the form_view from params", %{conn: conn} do
       conn =
         conn
-        |> get(Routes.home("join-game"))
+        |> get(Routes.home(%{form_view: "join-game"}))
 
       {:ok, view, _html} = live(conn)
 
@@ -29,7 +29,7 @@ defmodule ElixirCollectathonWeb.HomeLiveTest do
     test "assigns the form_view and game_id from params", %{conn: conn} do
       conn =
         conn
-        |> get(Routes.home("join-game", "12345"))
+        |> get(Routes.home(%{form_view: "join-game", game_id: "12345"}))
 
       {:ok, view, _html} = live(conn)
 
@@ -73,7 +73,7 @@ defmodule ElixirCollectathonWeb.HomeLiveTest do
     test "changes form_view back to create-and-join", %{conn: conn} do
       conn =
         conn
-        |> get(Routes.home("join-game"))
+        |> get(Routes.home(%{form_view: "join-game"}))
 
       {:ok, view, _html} = live(conn)
 
@@ -91,7 +91,7 @@ defmodule ElixirCollectathonWeb.HomeLiveTest do
     test "shows error if game does not exist", %{conn: conn} do
       conn =
         conn
-        |> get(Routes.home("join-game"))
+        |> get(Routes.home(%{form_view: "join-game"}))
 
       {:ok, view, _html} = live(conn)
 
@@ -113,7 +113,7 @@ defmodule ElixirCollectathonWeb.HomeLiveTest do
 
       conn =
         conn
-        |> get(Routes.home("join-game"))
+        |> get(Routes.home(%{form_view: "join-game"}))
 
       {:ok, view, _html} = live(conn)
 
@@ -131,7 +131,7 @@ defmodule ElixirCollectathonWeb.HomeLiveTest do
 
       conn =
         conn
-        |> get(Routes.home("join-game"))
+        |> get(Routes.home(%{form_view: "join-game"}))
 
       {:ok, view, _html} = live(conn)
 
@@ -148,7 +148,7 @@ defmodule ElixirCollectathonWeb.HomeLiveTest do
 
       conn =
         conn
-        |> get(Routes.home("join-game"))
+        |> get(Routes.home(%{form_view: "join-game"}))
 
       {:ok, view, _html} = live(conn)
 
