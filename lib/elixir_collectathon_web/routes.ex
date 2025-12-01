@@ -15,13 +15,19 @@ defmodule ElixirCollectathonWeb.Routes do
       Routes.home()
       # => ~p"/"
   """
+  @spec home() :: Phoenix.VerifiedRoutes.formatted_route()
   def home(), do: ~p"/"
 
-  def home(form_view), do: ~p"/?form_view=#{form_view}"
+  @spec home(%{section: String.t()}) :: Phoenix.VerifiedRoutes.formatted_route()
+  def home(%{section: section}), do: ~p"/##{section}"
 
-  def home(form_view, game_id) do
-    ~p"/?form_view=#{form_view}&game_id=#{game_id}"
-  end
+  @spec home(%{form_view: String.t(), game_id: String.t()}) ::
+          Phoenix.VerifiedRoutes.formatted_route()
+  def home(%{form_view: form_view, game_id: game_id}),
+    do: ~p"/?form_view=#{form_view}&game_id=#{game_id}"
+
+  @spec home(%{form_view: String.t()}) :: Phoenix.VerifiedRoutes.formatted_route()
+  def home(%{form_view: form_view}), do: ~p"/?form_view=#{form_view}"
 
   @doc """
   Returns the path to a game view.

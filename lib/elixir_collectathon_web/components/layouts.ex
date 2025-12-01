@@ -45,15 +45,19 @@ defmodule ElixirCollectathonWeb.Layouts do
           </h1>
         </.link>
         <nav class="hidden sm:block">
-          <a
-            href="#features"
+          <.link
             class="text-sm font-medium hover:text-white transition duration-150 mr-6"
+            navigate={Routes.home(%{section: "features"})}
           >
             Features
-          </a>
-          <a href="#howitworks" class="text-sm font-medium hover:text-white transition duration-150">
-            How It Works
-          </a>
+          </.link>
+
+          <.link
+            class="text-sm font-medium hover:text-white transition duration-150"
+            navigate={Routes.home(%{section: "howitworks"})}
+          >
+            How it Works
+          </.link>
         </nav>
       </header>
 
