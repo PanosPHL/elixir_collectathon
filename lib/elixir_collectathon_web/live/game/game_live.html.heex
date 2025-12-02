@@ -28,7 +28,7 @@
                   <h1 class="text-4xl font-bold text-center -mt-8 mb-4">{@game_id}</h1>
                   <.button
                     id="start-countdown-button"
-                    disabled={length(@players) < 2}
+                    disabled={@player_count < 2}
                     size="xl"
                     variant="primary"
                     phx-click="start_countdown"
@@ -51,11 +51,12 @@
       >
       </canvas>
     </div>
-    <div class="grid grid-cols-2 gap-x-2 gap-y-2">
+    <div class="grid grid-cols-2 gap-x-2 gap-y-2" id="players-list" phx-update="stream">
       <.player_scorecard
-        :for={{name, player} <- @players}
+        :for={{dom_id, player} <- @streams.players}
+        id={dom_id}
         color={player.color}
-        name={name}
+        name={player.name}
         inventory={player.inventory}
         letters={@letters}
       />
