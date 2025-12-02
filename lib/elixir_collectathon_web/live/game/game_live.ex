@@ -25,11 +25,12 @@ defmodule ElixirCollectathonWeb.GameLive do
   attr :name, :string, required: true
   attr :letters, :list, required: true
   attr :inventory, :list, required: true
+  attr :id, :string, required: true
 
   @spec player_scorecard(map()) :: Phoenix.LiveView.Rendered.t()
   def player_scorecard(assigns) do
     ~H"""
-    <div class="flex flex-col p-4 gap-3 rounded-lg bg-base-200 shadow-lg">
+    <div id={@id} class="flex flex-col p-4 gap-3 rounded-lg bg-base-200 shadow-lg">
       <div class="flex items-center gap-3">
         <div
           class="w-4 h-4 rounded-full ring-2 ring-offset-2 ring-offset-base-200"
@@ -79,12 +80,13 @@ defmodule ElixirCollectathonWeb.GameLive do
       socket
       |> assign(
         game_id: game_id,
-        players: [],
         letters: ~w"E L I X I R",
         countdown: nil,
         game_started: false,
+        player_count: 0,
         winner: nil
       )
+      |> stream(:players, [], dom_id: &"p-#{&1.name}")
     }
   end
 
@@ -135,14 +137,13 @@ defmodule ElixirCollectathonWeb.GameLive do
   @spec handle_info({:state, Game.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:state, %Game{players: players, winner: winner} = state}, socket) do
-    ordered_players =
-      Enum.to_list(players)
-      |> Enum.sort_by(&elem(&1, 1).player_num)
+    {count, sorted_players} = prepare_players(players)
 
     {
       :noreply,
       socket
-      |> assign(players: ordered_players, winner: winner)
+      |> assign(player_count: count, winner: winner)
+      |> stream(:players, sorted_players, dom_id: &"p-#{&1.name}", reset: true)
       |> push_event("game_update", state)
     }
   end
@@ -188,6 +189,18 @@ defmodule ElixirCollectathonWeb.GameLive do
   @spec handle_info(any(), Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info(_, socket) do
     {:noreply, socket}
+  end
+
+  @spec prepare_players(map()) :: {integer(), list()}
+  defp prepare_players(players) do
+    {count, players_list} =
+      Enum.reduce(players, {0, []}, fn {_name, player}, {count, acc} ->
+        {count + 1, [player | acc]}
+      end)
+
+    sorted_players = Enum.sort_by(players_list, & &1.player_num)
+
+    {count, sorted_players}
   end
 
   @doc """
