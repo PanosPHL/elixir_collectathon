@@ -44,9 +44,16 @@ defmodule ElixirCollectathonWeb.Layouts do
             Elixir <span class="text-neutral-content">Collectathon</span>
           </h1>
         </.link>
-        <nav class="hidden sm:block">
+        <nav class="hidden sm:flex sm:items-center sm:gap-6">
           <.link
-            class="text-sm font-medium hover:text-white transition duration-150 mr-6"
+            class="text-sm font-medium hover:text-white transition duration-150"
+            navigate={Routes.games_list()}
+          >
+            Games
+          </.link>
+
+          <.link
+            class="text-sm font-medium hover:text-white transition duration-150"
             navigate={Routes.home(%{section: "features"})}
           >
             Features

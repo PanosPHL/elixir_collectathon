@@ -20,6 +20,7 @@ defmodule ElixirCollectathonWeb.Router do
     get "/", HomeController, :index
     post "/games/join/", GameController, :join_game
 
+    live "/games", GamesListLive
     live "/games/:id", GameLive
     live "/controller/:game_id", ControllerLive
   end

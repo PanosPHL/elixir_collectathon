@@ -14,6 +14,15 @@ defmodule ElixirCollectathonWeb.Routes do
 
       Routes.home()
       # => ~p"/"
+
+      Routes.home(%{section: "features"})
+      # => ~p"/#features"
+
+      Routes.home(%{form_view: "join-game", game_id: "123456"})
+      # => ~p"/?form_view=join-game&game_id=123456"
+
+      Routes.home(%{form_view: "join-game"})
+      # => ~p"/?form_view=join-game"
   """
   @spec home() :: Phoenix.VerifiedRoutes.formatted_route()
   def home(), do: ~p"/"
@@ -40,6 +49,7 @@ defmodule ElixirCollectathonWeb.Routes do
       Routes.game("ABC123")
       # => ~p"/games/ABC123"
   """
+  @spec game(String.t()) :: Phoenix.VerifiedRoutes.formatted_route()
   def game(game_id) do
     ~p"/games/#{game_id}"
   end
@@ -55,7 +65,18 @@ defmodule ElixirCollectathonWeb.Routes do
       Routes.controller("ABC123")
       # => ~p"/controller/ABC123"
   """
+  @spec controller(String.t()) :: Phoenix.VerifiedRoutes.formatted_route()
   def controller(game_id) do
     ~p"/controller/#{game_id}"
   end
+
+  @doc """
+  Returns the path to the games list view.
+
+  ## Examples
+    Routes.games_list()
+    # => ~p"/games"
+  """
+  @spec games_list() :: Phoenix.VerifiedRoutes.formatted_route()
+  def games_list(), do: ~p"/games"
 end

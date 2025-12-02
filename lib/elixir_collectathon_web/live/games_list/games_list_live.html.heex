@@ -1,0 +1,46 @@
+<Layouts.app flash={@flash}>
+  <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="sm:flex sm:items-center sm:justify-between mb-6">
+      <div>
+        <h1 class="text-4xl sm:text-5xl font-extrabold primary-content">Games</h1>
+        <p class="mt-1 text-md secondary-content">
+          Active game instances. Join the fun or view the action!
+        </p>
+      </div>
+    </div>
+
+    <div id="games" phx-update="stream" class="space-y-4">
+      <div
+        id="no-games"
+        class="hidden only:block p-6 text-center accent-content rounded-lg bg-primary"
+      >
+        No games yet — create one to get started.
+      </div>
+
+      <div
+        :for={{dom_id, game_id} <- @streams.game_ids}
+        id={dom_id}
+        class="flex items-center justify-between gap-4 accent-content bg-primary p-4 rounded-lg shadow"
+      >
+        <div class="flex items-center">
+          <div>
+            <div class="text-lg font-medium">{game_id}</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <.button
+            navigate={Routes.home(%{form_view: "join-game", game_id: game_id})}
+            variant="neutral"
+          >
+            Join
+          </.button>
+
+          <.button navigate={Routes.game(game_id)} variant="neutral">
+            View
+          </.button>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layouts.app>
