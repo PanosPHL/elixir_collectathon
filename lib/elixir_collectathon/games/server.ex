@@ -460,7 +460,10 @@ defmodule ElixirCollectathon.Games.Server do
       ) do
     if timer_ref, do: :timer.cancel(timer_ref)
 
+    # broadcast to the individual game topic
     broadcast(game_id, {:game_server_shutdown, reason})
+    # broadcast to the "games" topic
+    broadcast({:topic, "games"}, {:game_server_shutdown, game_id})
 
     {
       :stop,
@@ -487,6 +490,15 @@ defmodule ElixirCollectathon.Games.Server do
     now - last_activity_at > @inactivity_limit_ms
   end
 
+  @spec broadcast({:topic, String.t()}, any()) :: :ok
+  defp broadcast({:topic, topic}, payload) do
+    PubSub.broadcast(
+      ElixirCollectathon.PubSub,
+      topic,
+      payload
+    )
+  end
+
   @spec broadcast(String.t(), any()) :: :ok
   defp broadcast(game_id, payload) do
     PubSub.broadcast(
@@ -497,10 +509,10 @@ defmodule ElixirCollectathon.Games.Server do
   end
 
   @spec broadcast(Game.t()) :: :ok
-  defp broadcast(%Game{} = state) do
+  defp broadcast(%Game{game_id: game_id} = state) do
     PubSub.broadcast(
       ElixirCollectathon.PubSub,
-      "game:#{state.game_id}",
+      "game:#{game_id}",
       {:state, state}
     )
   end

@@ -176,6 +176,21 @@ defmodule ElixirCollectathon.Games.ServerTest do
           flunk("Did not receive {:game_server_shutdown, :normal} message")
       end
     end
+
+    test "broadcasts to \"games\" topic when game server is shut down", %{game_id: game_id} do
+      Phoenix.PubSub.subscribe(
+        ElixirCollectathon.PubSub,
+        "games"
+      )
+
+      pid =
+        GameServer.via_tuple(game_id)
+        |> GenServer.whereis()
+
+      send(pid, {:shutdown_game, :normal})
+
+      assert_receive {:game_server_shutdown, ^game_id}
+    end
   end
 
   describe "inactivity timeout shutdown" do

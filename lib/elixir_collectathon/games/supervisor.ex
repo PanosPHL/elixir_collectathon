@@ -8,6 +8,7 @@ defmodule ElixirCollectathon.Games.Supervisor do
 
   Games are supervised and will be restarted if they crash.
   """
+  alias Phoenix.PubSub
   alias ElixirCollectathon.Games.Utils
   alias ElixirCollectathon.Games.Server, as: GameServer
 
@@ -39,6 +40,7 @@ defmodule ElixirCollectathon.Games.Supervisor do
 
     with false <- GameServer.does_game_exist?(game_id),
          {:ok, _server_pid} <- DynamicSupervisor.start_child(__MODULE__, {GameServer, game_id}) do
+      broadcast({:game_created, game_id})
       {:ok, game_id}
     else
       true -> create_game(count + 1)
@@ -48,4 +50,12 @@ defmodule ElixirCollectathon.Games.Supervisor do
   end
 
   def create_game(count) when count > 5, do: {:error, :max_retries}
+
+  defp broadcast(payload) do
+    PubSub.broadcast(
+      ElixirCollectathon.PubSub,
+      "games",
+      payload
+    )
+  end
 end

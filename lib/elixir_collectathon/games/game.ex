@@ -222,7 +222,8 @@ defmodule ElixirCollectathon.Games.Game do
 
   @spec countdown_to_start(Game.t()) :: Game.t()
   def countdown_to_start(%Game{countdown: countdown} = game)
-      when is_integer(countdown) and countdown > 1, do: %Game{game | countdown: countdown - 1}
+      when is_integer(countdown) and countdown > 1,
+      do: %Game{game | countdown: countdown - 1}
 
   def countdown_to_start(%Game{countdown: 1} = game), do: %Game{game | countdown: "GO!"}
 

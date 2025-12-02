@@ -64,32 +64,37 @@ defmodule ElixirCollectathonWeb.GameLive do
 
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(%{"id" => game_id}, _session, socket) do
-    case GenServer.whereis(GameServer.via_tuple(game_id)) do
-      nil ->
-        {
-          :ok,
-          socket
-          |> put_flash(:error, "Game not found.")
-          |> redirect(to: Routes.home())
-        }
+    GameServer.does_game_exist?(game_id)
+    |> handle_mount(game_id, socket)
+  end
 
-      _ ->
-        if connected?(socket),
-          do: PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
+  @spec handle_mount(boolean(), String.t(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  defp handle_mount(true, game_id, socket) do
+    if connected?(socket),
+      do: PubSub.subscribe(ElixirCollectathon.PubSub, "game:#{game_id}")
 
-        {
-          :ok,
-          socket
-          |> assign(
-            game_id: game_id,
-            players: [],
-            letters: ~w"E L I X I R",
-            countdown: nil,
-            game_started: false,
-            winner: nil
-          )
-        }
-    end
+    {
+      :ok,
+      socket
+      |> assign(
+        game_id: game_id,
+        players: [],
+        letters: ~w"E L I X I R",
+        countdown: nil,
+        game_started: false,
+        winner: nil
+      )
+    }
+  end
+
+  defp handle_mount(false, _game_id, socket) do
+    {
+      :ok,
+      socket
+      |> put_flash(:error, "Game not found.")
+      |> redirect(to: Routes.home())
+    }
   end
 
   @doc """

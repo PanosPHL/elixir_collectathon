@@ -1,8 +1,16 @@
 defmodule ElixirCollectathon.Games.SupervisorTest do
   use ExUnit.Case
 
+  alias Phoenix.PubSub
   alias ElixirCollectathon.Games.Supervisor, as: GameSupervisor
   alias ElixirCollectathon.Games.Server, as: GameServer
+
+  setup do
+    PubSub.subscribe(
+      ElixirCollectathon.PubSub,
+      "games"
+    )
+  end
 
   describe "create_game/0" do
     test "creates a game and returns a game ID" do
@@ -10,6 +18,12 @@ defmodule ElixirCollectathon.Games.SupervisorTest do
 
       assert is_binary(game_id)
       assert String.length(game_id) == 8
+    end
+
+    test "broadcasts to the \"games\" topic when a game is created" do
+      {:ok, game_id} = GameSupervisor.create_game()
+
+      assert_receive {:game_created, ^game_id}
     end
 
     test "created game has a running server" do
