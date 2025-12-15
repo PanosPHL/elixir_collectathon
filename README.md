@@ -1,4 +1,4 @@
-# ElixirCollectathon
+# [ElixirCollectathon](https://elixir-collectathon.fly.dev)
 https://github.com/user-attachments/assets/074c8895-3987-4940-b106-cca1ce29b007
 
 ElixirCollectathon is a real-time multiplayer game built with [Phoenix LiveView](https://hexdocs.pm/phoenix_live_view/Phoenix.LiveView.html). Players compete to collect letters spawning on the map to spell out the word "ELIXIR".
